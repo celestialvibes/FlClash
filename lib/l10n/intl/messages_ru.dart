@@ -104,7 +104,9 @@ class MessageLookup extends MessageLookupByLibrary {
     "action_tun": MessageLookupByLibrary.simpleMessage("TUN"),
     "action_view": MessageLookupByLibrary.simpleMessage("Показать/Скрыть"),
     "add": MessageLookupByLibrary.simpleMessage("Добавить"),
-    "addProfile": MessageLookupByLibrary.simpleMessage("Добавить профиль"),
+    "addProfile": MessageLookupByLibrary.simpleMessage(
+      "Импортировать подписку",
+    ),
     "addProxies": MessageLookupByLibrary.simpleMessage("Добавить прокси"),
     "addProxyGroup": MessageLookupByLibrary.simpleMessage(
       "Добавить группу прокси",
@@ -294,7 +296,7 @@ class MessageLookup extends MessageLookupByLibrary {
     "custom": MessageLookupByLibrary.simpleMessage("Пользовательский"),
     "cut": MessageLookupByLibrary.simpleMessage("Вырезать"),
     "dark": MessageLookupByLibrary.simpleMessage("Темный"),
-    "dashboard": MessageLookupByLibrary.simpleMessage("Панель управления"),
+    "dashboard": MessageLookupByLibrary.simpleMessage("LOOM"),
     "dataChangedSave": MessageLookupByLibrary.simpleMessage(
       "Обнаружены изменения данных, хотите сохранить?",
     ),
@@ -481,7 +483,7 @@ class MessageLookup extends MessageLookupByLibrary {
     ),
     "import": MessageLookupByLibrary.simpleMessage("Импорт"),
     "importFile": MessageLookupByLibrary.simpleMessage("Импорт из файла"),
-    "importFromURL": MessageLookupByLibrary.simpleMessage("Импорт из URL"),
+    "importFromURL": MessageLookupByLibrary.simpleMessage("Импорт подписки"),
     "importUrl": MessageLookupByLibrary.simpleMessage("Импорт по URL"),
     "includeAllProxies": MessageLookupByLibrary.simpleMessage(
       "Включить все прокси",
@@ -640,7 +642,7 @@ class MessageLookup extends MessageLookupByLibrary {
       "Текущая группа прокси не может быть выбрана.",
     ),
     "nullProfileDesc": MessageLookupByLibrary.simpleMessage(
-      "Нет профиля, пожалуйста, добавьте профиль",
+      "Импортируйте подписку, чтобы начать",
     ),
     "nullTip": m19,
     "numberTip": m20,
@@ -710,7 +712,7 @@ class MessageLookup extends MessageLookupByLibrary {
     ),
     "preview": MessageLookupByLibrary.simpleMessage("Предпросмотр"),
     "process": MessageLookupByLibrary.simpleMessage("процесс"),
-    "profile": MessageLookupByLibrary.simpleMessage("Профиль"),
+    "profile": MessageLookupByLibrary.simpleMessage("Подписка"),
     "profileAutoUpdateIntervalInvalidValidationDesc":
         MessageLookupByLibrary.simpleMessage(
           "Пожалуйста, введите действительный формат интервала времени",
@@ -731,11 +733,11 @@ class MessageLookup extends MessageLookupByLibrary {
     "profileUrlNullValidationDesc": MessageLookupByLibrary.simpleMessage(
       "Пожалуйста, введите URL профиля",
     ),
-    "profiles": MessageLookupByLibrary.simpleMessage("Профили"),
+    "profiles": MessageLookupByLibrary.simpleMessage("Подписки"),
     "profilesSort": MessageLookupByLibrary.simpleMessage("Сортировка профилей"),
     "project": MessageLookupByLibrary.simpleMessage("Проект"),
     "providers": MessageLookupByLibrary.simpleMessage("Провайдеры"),
-    "proxies": MessageLookupByLibrary.simpleMessage("Прокси"),
+    "proxies": MessageLookupByLibrary.simpleMessage("Серверы"),
     "proxiesEmpty": MessageLookupByLibrary.simpleMessage("Список прокси пуст"),
     "proxyChains": MessageLookupByLibrary.simpleMessage("Цепочки прокси"),
     "proxyDetectedAbnormal": MessageLookupByLibrary.simpleMessage(
@@ -1097,7 +1099,7 @@ class MessageLookup extends MessageLookupByLibrary {
     "upload": MessageLookupByLibrary.simpleMessage("Загрузка"),
     "url": MessageLookupByLibrary.simpleMessage("URL"),
     "urlDesc": MessageLookupByLibrary.simpleMessage(
-      "Получить профиль через URL",
+      "Импортировать подписку по URL",
     ),
     "urlTip": m24,
     "useHosts": MessageLookupByLibrary.simpleMessage("Использовать hosts"),

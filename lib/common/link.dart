@@ -22,14 +22,25 @@ class LinkManager {
     destroy();
     subscription = _appLinks.uriLinkStream.listen((uri) {
       commonPrint.log('onAppLink: $uri');
-      if (uri.host == 'install-config') {
-        final parameters = uri.queryParameters;
-        final url = parameters['url'];
-        if (url != null) {
-          installConfigCallBack(url);
-        }
+      final url = extractInstallConfigUrl(uri);
+      if (url != null) {
+        installConfigCallBack(url);
       }
     });
+  }
+
+  static String? extractInstallConfigUrl(Uri uri) {
+    if (uri.scheme != 'loomhost' || uri.host != 'install-config') {
+      return null;
+    }
+    final value = uri.queryParameters['url'];
+    final url = value == null ? null : Uri.tryParse(value);
+    if (url == null ||
+        (url.scheme != 'http' && url.scheme != 'https') ||
+        url.host.isEmpty) {
+      return null;
+    }
+    return value;
   }
 
   void destroy() {

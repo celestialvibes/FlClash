@@ -95,7 +95,7 @@ class MessageLookup extends MessageLookupByLibrary {
     "action_tun": MessageLookupByLibrary.simpleMessage("TUN"),
     "action_view": MessageLookupByLibrary.simpleMessage("表示/非表示"),
     "add": MessageLookupByLibrary.simpleMessage("追加"),
-    "addProfile": MessageLookupByLibrary.simpleMessage("プロファイルを追加"),
+    "addProfile": MessageLookupByLibrary.simpleMessage("サブスクリプションをインポート"),
     "addProxies": MessageLookupByLibrary.simpleMessage("プロキシを追加"),
     "addProxyGroup": MessageLookupByLibrary.simpleMessage("プロキシグループを追加"),
     "addProxyProviders": MessageLookupByLibrary.simpleMessage("プロキシプロバイダーを追加"),
@@ -227,7 +227,7 @@ class MessageLookup extends MessageLookupByLibrary {
     "custom": MessageLookupByLibrary.simpleMessage("カスタム"),
     "cut": MessageLookupByLibrary.simpleMessage("切り取り"),
     "dark": MessageLookupByLibrary.simpleMessage("ダーク"),
-    "dashboard": MessageLookupByLibrary.simpleMessage("ダッシュボード"),
+    "dashboard": MessageLookupByLibrary.simpleMessage("LOOM"),
     "dataChangedSave": MessageLookupByLibrary.simpleMessage(
       "データの変更が検出されました。保存しますか？",
     ),
@@ -370,7 +370,7 @@ class MessageLookup extends MessageLookupByLibrary {
     ),
     "import": MessageLookupByLibrary.simpleMessage("インポート"),
     "importFile": MessageLookupByLibrary.simpleMessage("ファイルからインポート"),
-    "importFromURL": MessageLookupByLibrary.simpleMessage("URLからインポート"),
+    "importFromURL": MessageLookupByLibrary.simpleMessage("サブスクリプションをインポート"),
     "importUrl": MessageLookupByLibrary.simpleMessage("URLからインポート"),
     "includeAllProxies": MessageLookupByLibrary.simpleMessage("すべてのプロキシを含める"),
     "includeAllProxiesTip": MessageLookupByLibrary.simpleMessage(
@@ -483,7 +483,7 @@ class MessageLookup extends MessageLookupByLibrary {
       "現在のプロキシグループは選択できません",
     ),
     "nullProfileDesc": MessageLookupByLibrary.simpleMessage(
-      "プロファイルがありません。追加してください",
+      "サブスクリプションをインポートして開始",
     ),
     "nullTip": m19,
     "numberTip": m20,
@@ -535,7 +535,7 @@ class MessageLookup extends MessageLookupByLibrary {
     "pressKeyboard": MessageLookupByLibrary.simpleMessage("キーボードを押してください"),
     "preview": MessageLookupByLibrary.simpleMessage("プレビュー"),
     "process": MessageLookupByLibrary.simpleMessage("プロセス"),
-    "profile": MessageLookupByLibrary.simpleMessage("プロファイル"),
+    "profile": MessageLookupByLibrary.simpleMessage("サブスクリプション"),
     "profileAutoUpdateIntervalInvalidValidationDesc":
         MessageLookupByLibrary.simpleMessage("有効な間隔形式を入力してください"),
     "profileAutoUpdateIntervalNullValidationDesc":
@@ -552,11 +552,11 @@ class MessageLookup extends MessageLookupByLibrary {
     "profileUrlNullValidationDesc": MessageLookupByLibrary.simpleMessage(
       "プロファイルURLを入力してください",
     ),
-    "profiles": MessageLookupByLibrary.simpleMessage("プロファイル一覧"),
+    "profiles": MessageLookupByLibrary.simpleMessage("サブスクリプション"),
     "profilesSort": MessageLookupByLibrary.simpleMessage("プロファイルの並び替え"),
     "project": MessageLookupByLibrary.simpleMessage("プロジェクト"),
     "providers": MessageLookupByLibrary.simpleMessage("プロバイダー"),
-    "proxies": MessageLookupByLibrary.simpleMessage("プロキシ"),
+    "proxies": MessageLookupByLibrary.simpleMessage("サーバー"),
     "proxiesEmpty": MessageLookupByLibrary.simpleMessage("プロキシが空です"),
     "proxyChains": MessageLookupByLibrary.simpleMessage("プロキシチェーン"),
     "proxyDetectedAbnormal": MessageLookupByLibrary.simpleMessage(
@@ -841,7 +841,7 @@ class MessageLookup extends MessageLookupByLibrary {
     "update": MessageLookupByLibrary.simpleMessage("更新"),
     "upload": MessageLookupByLibrary.simpleMessage("アップロード"),
     "url": MessageLookupByLibrary.simpleMessage("URL"),
-    "urlDesc": MessageLookupByLibrary.simpleMessage("URL経由でプロファイルを取得"),
+    "urlDesc": MessageLookupByLibrary.simpleMessage("サブスクリプションURLからインポート"),
     "urlTip": m24,
     "useHosts": MessageLookupByLibrary.simpleMessage("ホストを使用"),
     "useSystemHosts": MessageLookupByLibrary.simpleMessage("システムホストを使用"),

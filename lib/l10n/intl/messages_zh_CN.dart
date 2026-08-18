@@ -93,7 +93,7 @@ class MessageLookup extends MessageLookupByLibrary {
     "action_tun": MessageLookupByLibrary.simpleMessage("虚拟网卡"),
     "action_view": MessageLookupByLibrary.simpleMessage("显示/隐藏"),
     "add": MessageLookupByLibrary.simpleMessage("添加"),
-    "addProfile": MessageLookupByLibrary.simpleMessage("添加配置"),
+    "addProfile": MessageLookupByLibrary.simpleMessage("导入订阅"),
     "addProxies": MessageLookupByLibrary.simpleMessage("添加代理"),
     "addProxyGroup": MessageLookupByLibrary.simpleMessage("添加策略组"),
     "addProxyProviders": MessageLookupByLibrary.simpleMessage("添加代理集"),
@@ -205,7 +205,7 @@ class MessageLookup extends MessageLookupByLibrary {
     "custom": MessageLookupByLibrary.simpleMessage("自定义"),
     "cut": MessageLookupByLibrary.simpleMessage("剪切"),
     "dark": MessageLookupByLibrary.simpleMessage("深色"),
-    "dashboard": MessageLookupByLibrary.simpleMessage("仪表盘"),
+    "dashboard": MessageLookupByLibrary.simpleMessage("LOOM"),
     "dataChangedSave": MessageLookupByLibrary.simpleMessage("检测到数据有更改，是否保存"),
     "dataCollectionContent": MessageLookupByLibrary.simpleMessage(
       "本应用使用 Firebase Crashlytics 收集崩溃信息以改进应用稳定性。\n收集的数据包括设备信息和崩溃详情，不包含个人敏感数据。\n您可以在设置中关闭此功能。",
@@ -328,7 +328,7 @@ class MessageLookup extends MessageLookupByLibrary {
     "ignoreBatteryOptimization": MessageLookupByLibrary.simpleMessage("忽略电池优化"),
     "import": MessageLookupByLibrary.simpleMessage("导入"),
     "importFile": MessageLookupByLibrary.simpleMessage("通过文件导入"),
-    "importFromURL": MessageLookupByLibrary.simpleMessage("从URL导入"),
+    "importFromURL": MessageLookupByLibrary.simpleMessage("导入订阅"),
     "importUrl": MessageLookupByLibrary.simpleMessage("通过URL导入"),
     "includeAllProxies": MessageLookupByLibrary.simpleMessage("包含所有代理"),
     "includeAllProxiesTip": MessageLookupByLibrary.simpleMessage(
@@ -426,7 +426,7 @@ class MessageLookup extends MessageLookupByLibrary {
     "noResolveHostname": MessageLookupByLibrary.simpleMessage("不解析主机名"),
     "none": MessageLookupByLibrary.simpleMessage("无"),
     "notSelectedTip": MessageLookupByLibrary.simpleMessage("当前代理组无法选中"),
-    "nullProfileDesc": MessageLookupByLibrary.simpleMessage("没有配置文件,请先添加配置文件"),
+    "nullProfileDesc": MessageLookupByLibrary.simpleMessage("导入订阅以开始使用"),
     "nullTip": m19,
     "numberTip": m20,
     "onDemand": MessageLookupByLibrary.simpleMessage("按需运行"),
@@ -469,7 +469,7 @@ class MessageLookup extends MessageLookupByLibrary {
     "pressKeyboard": MessageLookupByLibrary.simpleMessage("请按下按键"),
     "preview": MessageLookupByLibrary.simpleMessage("预览"),
     "process": MessageLookupByLibrary.simpleMessage("进程"),
-    "profile": MessageLookupByLibrary.simpleMessage("配置"),
+    "profile": MessageLookupByLibrary.simpleMessage("订阅"),
     "profileAutoUpdateIntervalInvalidValidationDesc":
         MessageLookupByLibrary.simpleMessage("请输入有效间隔时间格式"),
     "profileAutoUpdateIntervalNullValidationDesc":
@@ -486,11 +486,11 @@ class MessageLookup extends MessageLookupByLibrary {
     "profileUrlNullValidationDesc": MessageLookupByLibrary.simpleMessage(
       "请输入配置URL",
     ),
-    "profiles": MessageLookupByLibrary.simpleMessage("配置"),
+    "profiles": MessageLookupByLibrary.simpleMessage("订阅"),
     "profilesSort": MessageLookupByLibrary.simpleMessage("配置排序"),
     "project": MessageLookupByLibrary.simpleMessage("项目"),
     "providers": MessageLookupByLibrary.simpleMessage("提供者"),
-    "proxies": MessageLookupByLibrary.simpleMessage("代理"),
+    "proxies": MessageLookupByLibrary.simpleMessage("服务器"),
     "proxiesEmpty": MessageLookupByLibrary.simpleMessage("代理为空"),
     "proxyChains": MessageLookupByLibrary.simpleMessage("代理链"),
     "proxyDetectedAbnormal": MessageLookupByLibrary.simpleMessage(
@@ -729,7 +729,7 @@ class MessageLookup extends MessageLookupByLibrary {
     "update": MessageLookupByLibrary.simpleMessage("更新"),
     "upload": MessageLookupByLibrary.simpleMessage("上传"),
     "url": MessageLookupByLibrary.simpleMessage("URL"),
-    "urlDesc": MessageLookupByLibrary.simpleMessage("通过URL获取配置文件"),
+    "urlDesc": MessageLookupByLibrary.simpleMessage("通过订阅 URL 导入"),
     "urlTip": m24,
     "useHosts": MessageLookupByLibrary.simpleMessage("使用Hosts"),
     "useSystemHosts": MessageLookupByLibrary.simpleMessage("使用系统Hosts"),

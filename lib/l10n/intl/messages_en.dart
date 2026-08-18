@@ -105,7 +105,7 @@ class MessageLookup extends MessageLookupByLibrary {
     "action_tun": MessageLookupByLibrary.simpleMessage("TUN"),
     "action_view": MessageLookupByLibrary.simpleMessage("Show/Hide"),
     "add": MessageLookupByLibrary.simpleMessage("Add"),
-    "addProfile": MessageLookupByLibrary.simpleMessage("Add Profile"),
+    "addProfile": MessageLookupByLibrary.simpleMessage("Import subscription"),
     "addProxies": MessageLookupByLibrary.simpleMessage("Add proxies"),
     "addProxyGroup": MessageLookupByLibrary.simpleMessage("Add proxy group"),
     "addProxyProviders": MessageLookupByLibrary.simpleMessage(
@@ -287,7 +287,7 @@ class MessageLookup extends MessageLookupByLibrary {
     "custom": MessageLookupByLibrary.simpleMessage("Custom"),
     "cut": MessageLookupByLibrary.simpleMessage("Cut"),
     "dark": MessageLookupByLibrary.simpleMessage("Dark"),
-    "dashboard": MessageLookupByLibrary.simpleMessage("Dashboard"),
+    "dashboard": MessageLookupByLibrary.simpleMessage("LOOM"),
     "dataChangedSave": MessageLookupByLibrary.simpleMessage(
       "Data changes detected, do you want to save?",
     ),
@@ -464,7 +464,9 @@ class MessageLookup extends MessageLookupByLibrary {
     ),
     "import": MessageLookupByLibrary.simpleMessage("Import"),
     "importFile": MessageLookupByLibrary.simpleMessage("Import from file"),
-    "importFromURL": MessageLookupByLibrary.simpleMessage("Import from URL"),
+    "importFromURL": MessageLookupByLibrary.simpleMessage(
+      "Import subscription",
+    ),
     "importUrl": MessageLookupByLibrary.simpleMessage("Import from URL"),
     "includeAllProxies": MessageLookupByLibrary.simpleMessage(
       "Include all proxies",
@@ -613,7 +615,7 @@ class MessageLookup extends MessageLookupByLibrary {
       "The current proxy group cannot be selected.",
     ),
     "nullProfileDesc": MessageLookupByLibrary.simpleMessage(
-      "No profile, Please add a profile",
+      "Import a subscription to get started",
     ),
     "nullTip": m19,
     "numberTip": m20,
@@ -675,7 +677,7 @@ class MessageLookup extends MessageLookupByLibrary {
     ),
     "preview": MessageLookupByLibrary.simpleMessage("Preview"),
     "process": MessageLookupByLibrary.simpleMessage("Process"),
-    "profile": MessageLookupByLibrary.simpleMessage("Profile"),
+    "profile": MessageLookupByLibrary.simpleMessage("Subscription"),
     "profileAutoUpdateIntervalInvalidValidationDesc":
         MessageLookupByLibrary.simpleMessage(
           "Please input a valid interval time format",
@@ -696,11 +698,11 @@ class MessageLookup extends MessageLookupByLibrary {
     "profileUrlNullValidationDesc": MessageLookupByLibrary.simpleMessage(
       "Please input the profile URL",
     ),
-    "profiles": MessageLookupByLibrary.simpleMessage("Profiles"),
+    "profiles": MessageLookupByLibrary.simpleMessage("Subscriptions"),
     "profilesSort": MessageLookupByLibrary.simpleMessage("Profiles sort"),
     "project": MessageLookupByLibrary.simpleMessage("Project"),
     "providers": MessageLookupByLibrary.simpleMessage("Providers"),
-    "proxies": MessageLookupByLibrary.simpleMessage("Proxies"),
+    "proxies": MessageLookupByLibrary.simpleMessage("Servers"),
     "proxiesEmpty": MessageLookupByLibrary.simpleMessage("Proxies is empty"),
     "proxyChains": MessageLookupByLibrary.simpleMessage("Proxy chains"),
     "proxyDetectedAbnormal": MessageLookupByLibrary.simpleMessage(
@@ -1036,7 +1038,7 @@ class MessageLookup extends MessageLookupByLibrary {
     "upload": MessageLookupByLibrary.simpleMessage("Upload"),
     "url": MessageLookupByLibrary.simpleMessage("URL"),
     "urlDesc": MessageLookupByLibrary.simpleMessage(
-      "Obtain profile through URL",
+      "Import a subscription URL",
     ),
     "urlTip": m24,
     "useHosts": MessageLookupByLibrary.simpleMessage("Use hosts"),

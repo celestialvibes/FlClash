@@ -69,24 +69,24 @@ class AppLocalizations {
     return Intl.message('Direct', name: 'direct', desc: '', args: []);
   }
 
-  /// `Dashboard`
+  /// `LOOM`
   String get dashboard {
-    return Intl.message('Dashboard', name: 'dashboard', desc: '', args: []);
+    return Intl.message('LOOM', name: 'dashboard', desc: '', args: []);
   }
 
-  /// `Proxies`
+  /// `Servers`
   String get proxies {
-    return Intl.message('Proxies', name: 'proxies', desc: '', args: []);
+    return Intl.message('Servers', name: 'proxies', desc: '', args: []);
   }
 
-  /// `Profile`
+  /// `Subscription`
   String get profile {
-    return Intl.message('Profile', name: 'profile', desc: '', args: []);
+    return Intl.message('Subscription', name: 'profile', desc: '', args: []);
   }
 
-  /// `Profiles`
+  /// `Subscriptions`
   String get profiles {
-    return Intl.message('Profiles', name: 'profiles', desc: '', args: []);
+    return Intl.message('Subscriptions', name: 'profiles', desc: '', args: []);
   }
 
   /// `Tools`
@@ -174,10 +174,10 @@ class AppLocalizations {
     return Intl.message('Download', name: 'download', desc: '', args: []);
   }
 
-  /// `No profile, Please add a profile`
+  /// `Import a subscription to get started`
   String get nullProfileDesc {
     return Intl.message(
-      'No profile, Please add a profile',
+      'Import a subscription to get started',
       name: 'nullProfileDesc',
       desc: '',
       args: [],
@@ -484,10 +484,10 @@ class AppLocalizations {
     return Intl.message('URL', name: 'url', desc: '', args: []);
   }
 
-  /// `Obtain profile through URL`
+  /// `Import a subscription URL`
   String get urlDesc {
     return Intl.message(
-      'Obtain profile through URL',
+      'Import a subscription URL',
       name: 'urlDesc',
       desc: '',
       args: [],
@@ -609,10 +609,10 @@ class AppLocalizations {
     return Intl.message('Dark', name: 'dark', desc: '', args: []);
   }
 
-  /// `Import from URL`
+  /// `Import subscription`
   String get importFromURL {
     return Intl.message(
-      'Import from URL',
+      'Import subscription',
       name: 'importFromURL',
       desc: '',
       args: [],
@@ -3324,9 +3324,14 @@ class AppLocalizations {
     );
   }
 
-  /// `Add Profile`
+  /// `Import subscription`
   String get addProfile {
-    return Intl.message('Add Profile', name: 'addProfile', desc: '', args: []);
+    return Intl.message(
+      'Import subscription',
+      name: 'addProfile',
+      desc: '',
+      args: [],
+    );
   }
 
   /// `Delay Test`
