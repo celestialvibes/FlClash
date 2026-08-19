@@ -240,6 +240,7 @@ class _WindowHeaderState extends State<WindowHeader> {
   @override
   Widget build(BuildContext context) {
     return Material(
+      color: context.colorScheme.surface,
       child: Stack(
         alignment: AlignmentDirectional.center,
         children: [
@@ -252,7 +253,14 @@ class _WindowHeaderState extends State<WindowHeader> {
                 _updateMaximized();
               },
               child: Container(
-                color: context.colorScheme.secondary.opacity15,
+                decoration: BoxDecoration(
+                  color: context.colorScheme.surface,
+                  border: Border(
+                    bottom: BorderSide(
+                      color: context.colorScheme.outlineVariant,
+                    ),
+                  ),
+                ),
                 alignment: Alignment.centerLeft,
                 height: kHeaderHeight,
               ),
