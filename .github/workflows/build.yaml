@@ -141,6 +141,10 @@ jobs:
           file "$app/Contents/MacOS/LOOM" | grep -q 'arm64'
           file "$app/Contents/MacOS/LOOM" | grep -vq 'x86_64'
           hdiutil verify "${dmg[0]}"
+          if [[ "$GITHUB_REF" == refs/tags/* ]]; then
+            codesign -dv --verbose=4 "$app" 2>&1 | grep -q '^Authority=Developer ID Application:'
+            xcrun stapler validate "${dmg[0]}"
+          fi
 
       - name: Upload
         uses: actions/upload-artifact@v7
