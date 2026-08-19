@@ -5,6 +5,7 @@ import (
 	"context"
 	"github.com/metacubex/mihomo/adapter"
 	"github.com/metacubex/mihomo/adapter/outboundgroup"
+	"github.com/metacubex/mihomo/common/convert"
 	"github.com/metacubex/mihomo/common/observable"
 	"github.com/metacubex/mihomo/common/utils"
 	"github.com/metacubex/mihomo/component/mmdb"
@@ -85,11 +86,47 @@ func handleShutdown() bool {
 
 func handleValidateConfig(path string) string {
 	buf, err := readFile(path)
-	_, err = config.UnmarshalRawConfig(buf)
+	_, err = parseProfileConfig(buf)
 	if err != nil {
 		return err.Error()
 	}
 	return ""
+}
+
+func parseProfileConfig(buf []byte) (*config.RawConfig, error) {
+	rawConfig, yamlErr := config.UnmarshalRawConfig(buf)
+	if yamlErr == nil {
+		return rawConfig, nil
+	}
+
+	proxies, err := convert.ConvertsV2Ray(buf)
+	if err != nil {
+		return nil, yamlErr
+	}
+
+	proxyNames := make([]string, 0, len(proxies))
+	for _, proxy := range proxies {
+		if name, ok := proxy["name"].(string); ok && name != "" {
+			proxyNames = append(proxyNames, name)
+		}
+	}
+	if len(proxyNames) == 0 {
+		return nil, yamlErr
+	}
+
+	groupName := "LOOM"
+	for slices.Contains(proxyNames, groupName) {
+		groupName += " Servers"
+	}
+	rawConfig = config.DefaultRawConfig()
+	rawConfig.Proxy = proxies
+	rawConfig.ProxyGroup = []map[string]any{{
+		"name":    groupName,
+		"type":    "select",
+		"proxies": proxyNames,
+	}}
+	rawConfig.Rule = []string{"MATCH," + groupName}
+	return rawConfig, nil
 }
 
 func handleGetProxies() ProxiesData {
@@ -422,7 +459,7 @@ func handleGetConfig(path string) (*config.RawConfig, error) {
 	if err != nil {
 		return nil, err
 	}
-	prof, err := config.UnmarshalRawConfig(bytes)
+	prof, err := parseProfileConfig(bytes)
 	if err != nil {
 		return nil, err
 	}
