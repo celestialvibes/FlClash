@@ -123,7 +123,6 @@ jobs:
       - name: Get Flutter Dependency
         run: |
           flutter --version
-          flutter config --enable-macos-arm64-only
           flutter pub get
 
       - name: Setup
