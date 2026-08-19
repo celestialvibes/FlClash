@@ -236,8 +236,9 @@ void main() {
         .update(
           (state) => state.copyWith(allowBypass: true, systemProxy: true),
         );
-    expect(container.read(sharedStateProvider).vpnOptions.systemProxy, isFalse);
-    expect(container.read(sharedStateProvider).vpnOptions.allowBypass, isFalse);
+    final vpnOptions = container.read(sharedStateProvider).vpnOptions;
+    expect(vpnOptions?.systemProxy, isFalse);
+    expect(vpnOptions?.allowBypass, isFalse);
 
     final dns = container.read(autoSetSystemDnsStateProvider);
     expect(dns.a, isTrue);
