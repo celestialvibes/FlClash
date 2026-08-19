@@ -1,6 +1,7 @@
 import 'package:fl_clash/common/common.dart';
 import 'package:fl_clash/common/theme.dart';
 import 'package:fl_clash/l10n/l10n.dart';
+import 'package:fl_clash/models/models.dart';
 import 'package:fl_clash/pages/home.dart';
 import 'package:fl_clash/providers/providers.dart';
 import 'package:fl_clash/state.dart';
@@ -16,7 +17,10 @@ void main() {
   ) async {
     await tester.pumpWidget(
       ProviderScope(
-        overrides: [viewSizeProvider.overrideWithValue(const Size(800, 600))],
+        overrides: [
+          profilesProvider.overrideWith(_EmptyProfiles.new),
+          viewSizeProvider.overrideWithValue(const Size(800, 600)),
+        ],
         child: const _TestApp(child: LoomRootView()),
       ),
     );
@@ -52,6 +56,11 @@ void main() {
     expect(find.text('not a url'), findsOneWidget);
     expect(tester.takeException(), null);
   });
+}
+
+class _EmptyProfiles extends Profiles {
+  @override
+  List<Profile> build() => const [];
 }
 
 class _TestApp extends StatelessWidget {
