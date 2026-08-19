@@ -1,4 +1,7 @@
 #include "../../Flutter/Flutter-Release.xcconfig"
 #include "Warnings.xcconfig"
 EXCLUDED_ARCHS = x86_64
-ENABLE_HARDENED_RUNTIME = YES
+// Ad-hoc builds have no Team ID, so macOS rejects embedded Flutter frameworks
+// when library validation is enabled. Tagged releases must override this after
+// installing a Developer ID identity.
+ENABLE_HARDENED_RUNTIME = NO

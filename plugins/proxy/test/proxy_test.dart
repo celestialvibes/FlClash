@@ -285,20 +285,59 @@ void main() {
   });
 
   group('macOS proxy command builders', () {
-    test(
-      'filters networksetup service list headers, disabled services, and blanks',
-      () {
-        final services = MacosProxyCommands.parseNetworkServices('''
+    test('selects only the service backing the default route', () {
+      final service = MacosProxyCommands.parsePrimaryNetworkService(
+        '''
+  interface: en0
+''',
+        '''
 An asterisk (*) denotes that a network service is disabled.
-Wi-Fi
-*Thunderbolt Bridge
-USB 10/100/1000 LAN
+(1) Thunderbolt Bridge
+(Hardware Port: Thunderbolt Bridge, Device: bridge0)
 
-''');
+(2) Wi-Fi
+(Hardware Port: Wi-Fi, Device: en0)
+''',
+      );
 
-        expect(services, ['Wi-Fi', 'USB 10/100/1000 LAN']);
-      },
-    );
+      expect(service, 'Wi-Fi');
+    });
+
+    test('recognizes only a complete LOOM loopback proxy', () {
+      const proxy = '''
+Enabled: Yes
+Server: 127.0.0.1
+Port: 7890
+Authenticated Proxy Enabled: 0
+''';
+
+      expect(MacosProxyCommands.isLoomProxy([proxy, proxy, proxy]), isTrue);
+      expect(
+        MacosProxyCommands.isLoomProxy([
+          proxy,
+          proxy,
+          proxy.replaceFirst('Port: 7890', 'Port: 7891'),
+        ]),
+        isFalse,
+      );
+    });
+
+    test('watchdog receives values as arguments, not shell interpolation', () {
+      final arguments = MacosProxyCommands.buildWatchdogArguments(
+        parentPid: 42,
+        markerPath: '/tmp/loom marker',
+        service: 'USB & Wi-Fi',
+        port: 7890,
+      );
+
+      expect(arguments.skip(3), [
+        '42',
+        '/tmp/loom marker',
+        'USB & Wi-Fi',
+        '7890',
+      ]);
+      expect(arguments[1], MacosProxyCommands.watchdogScript);
+    });
 
     test('passes bypass domains as separate networksetup arguments', () {
       final command = MacosProxyCommands.buildProxyBypass('Wi-Fi', [
@@ -353,7 +392,7 @@ USB 10/100/1000 LAN
       );
 
       expect(await proxy.start(7890, const []), isFalse);
-      expect(callCount, 1);
+      expect(callCount, 2);
     });
   });
 

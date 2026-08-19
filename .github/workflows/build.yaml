@@ -136,12 +136,12 @@ jobs:
           test -d "$app"
           test "${#dmg[@]}" -eq 1
           codesign --verify --deep --strict "$app"
-          codesign -dv --verbose=4 "$app" 2>&1 | grep -q 'flags=.*runtime'
-          codesign -dv --verbose=4 "$app/Contents/MacOS/FlClashCore" 2>&1 | grep -q 'flags=.*runtime'
           file "$app/Contents/MacOS/LOOM" | grep -q 'arm64'
           file "$app/Contents/MacOS/LOOM" | grep -vq 'x86_64'
           hdiutil verify "${dmg[0]}"
           if [[ "$GITHUB_REF" == refs/tags/* ]]; then
+            codesign -dv --verbose=4 "$app" 2>&1 | grep -q 'flags=.*runtime'
+            codesign -dv --verbose=4 "$app/Contents/MacOS/FlClashCore" 2>&1 | grep -q 'flags=.*runtime'
             codesign -dv --verbose=4 "$app" 2>&1 | grep -q '^Authority=Developer ID Application:'
             xcrun stapler validate "${dmg[0]}"
           fi
