@@ -42,6 +42,27 @@ void main() {
       expect(profile?.url, edited.url);
     });
 
+    test('failed URL replacement restores the working profile', () async {
+      final original = Profile.normal(
+        label: 'working',
+        url: 'https://example.com/sub',
+      );
+      final container = ProviderContainer(
+        overrides: [
+          currentProfileIdProvider.overrideWithBuild((_, _) => original.id),
+          profilesProvider.overrideWith(() => _TestProfiles([original])),
+        ],
+      );
+      addTearDown(container.dispose);
+
+      final imported = await container
+          .read(profilesActionProvider.notifier)
+          .addProfileFormURL('bad-url', showError: false);
+
+      expect(imported, isFalse);
+      expect(container.read(profilesProvider).single, original);
+    });
+
     test('updates selection, inserts first profile, and reorders profiles', () {
       final first = Profile.normal(label: 'First');
       final second = Profile.normal(label: 'Second');

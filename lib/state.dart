@@ -123,10 +123,12 @@ class GlobalState {
     String? title,
     required LoadingTag? tag,
     bool silence = false,
+    bool showError = true,
   }) async {
     return globalState.safeRun(
       futureFunction,
       silence: silence,
+      showError: showError,
       title: title,
       onStart: () {
         if (tag != null) {
@@ -147,13 +149,16 @@ class GlobalState {
     VoidCallback? onStart,
     VoidCallback? onEnd,
     bool silence = true,
+    bool showError = true,
   }) async {
     try {
       onStart?.call();
       return await futureFunction();
     } catch (e, s) {
       commonPrint.log('$title ===> $e, $s', logLevel: LogLevel.warning);
-      if (silence) {
+      if (!showError) {
+        return null;
+      } else if (silence) {
         showNotifier(e.toString());
       } else {
         showMessage(

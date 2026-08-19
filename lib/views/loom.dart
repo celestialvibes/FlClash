@@ -117,25 +117,39 @@ Proxy? _watchSelectedProxy(WidgetRef ref, Group? group) {
 }
 
 Future<void> _importSubscription(BuildContext context) async {
-  final appLocalizations = context.appLocalizations;
-  final url = await globalState.showCommonDialog<String>(
-    child: InputDialog(
-      autovalidateMode: AutovalidateMode.onUnfocus,
-      title: 'Добавить подписку LOOM',
-      labelText: appLocalizations.url,
-      value: '',
-      inputFormatters: TextInputLimits.limit(TextInputLimits.url),
-      validator: (value) {
-        if (value == null || value.isEmpty) return 'Введите ссылку';
-        if (!value.isUrl) return 'Проверьте ссылку';
-        return null;
-      },
-    ),
-  );
-  if (url == null) return;
-  await globalState.container
-      .read(profilesActionProvider.notifier)
-      .addProfileFormURL(url);
+  final urlLabel = context.appLocalizations.url;
+  var value = '';
+  while (true) {
+    final url = await globalState.showCommonDialog<String>(
+      child: InputDialog(
+        autovalidateMode: AutovalidateMode.onUnfocus,
+        title: 'Добавить подписку LOOM',
+        labelText: urlLabel,
+        value: value,
+        inputFormatters: TextInputLimits.limit(TextInputLimits.url),
+        validator: (value) {
+          if (value == null || value.isEmpty) return 'Введите ссылку';
+          if (!value.isUrl) return 'Проверьте ссылку';
+          return null;
+        },
+      ),
+    );
+    if (url == null) return;
+    value = url;
+    final imported = await globalState.container
+        .read(profilesActionProvider.notifier)
+        .addProfileFormURL(url, showError: false);
+    if (imported) return;
+    final retry = await globalState.showMessage(
+      title: 'Не удалось добавить подписку',
+      message: const TextSpan(
+        text:
+            'Проверьте интернет и ссылку. Если подписка истекла, получите новую в боте.',
+      ),
+      confirmText: 'Попробовать снова',
+    );
+    if (retry != true) return;
+  }
 }
 
 Future<void> _applyLoomRules(WidgetRef ref, int profileId) async {

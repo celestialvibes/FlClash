@@ -37,7 +37,7 @@ class Request {
         options: Options(responseType: ResponseType.bytes),
       );
     } catch (e) {
-      commonPrint.log('getFileResponseForUrl error ${e.toString()}');
+      commonPrint.log('getFileResponseForUrl failed: ${e.runtimeType}');
       if (e is DioException) {
         if (e.type == DioExceptionType.unknown) {
           throw currentAppLocalizations.unknownNetworkError;

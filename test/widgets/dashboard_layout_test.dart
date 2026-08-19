@@ -28,6 +28,13 @@ void main() {
 
     expect(find.text('Добавить подписку LOOM'), findsOneWidget);
     expect(find.byType(TextField), findsOneWidget);
+
+    await tester.enterText(find.byType(TextField), 'not a url');
+    await tester.tap(find.byType(TextButton).last);
+    await tester.pump();
+
+    expect(find.text('Проверьте ссылку'), findsOneWidget);
+    expect(find.text('not a url'), findsOneWidget);
     expect(tester.takeException(), null);
   });
 }

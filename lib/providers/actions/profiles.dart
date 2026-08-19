@@ -102,7 +102,7 @@ class ProfilesAction extends _$ProfilesAction {
     }
   }
 
-  Future<void> addProfileFormURL(String url) async {
+  Future<bool> addProfileFormURL(String url, {bool showError = true}) async {
     if (globalState.navigatorKey.currentState?.canPop() ?? false) {
       globalState.navigatorKey.currentState?.popUntil((route) => route.isFirst);
     }
@@ -114,11 +114,13 @@ class ProfilesAction extends _$ProfilesAction {
           showLoading: true,
         );
         return true;
-      });
+      }, showError: showError);
       if (updated == true) {
         ref.read(currentPageLabelProvider.notifier).value = PageLabel.dashboard;
+      } else {
+        ref.read(profilesProvider.notifier).put(currentProfile);
       }
-      return;
+      return updated == true;
     }
     final profile = await globalState.loadingRun(
       tag: LoadingTag.profiles,
@@ -126,11 +128,14 @@ class ProfilesAction extends _$ProfilesAction {
         return Profile.normal(url: url).update();
       },
       title: currentAppLocalizations.addProfile,
+      showError: showError,
     );
     if (profile != null) {
       putProfile(profile);
       ref.read(currentPageLabelProvider.notifier).value = PageLabel.dashboard;
+      return true;
     }
+    return false;
   }
 
   void setProfileAndAutoApply(Profile profile) {
