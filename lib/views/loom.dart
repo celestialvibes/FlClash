@@ -1010,6 +1010,13 @@ class LoomSettingsView extends ConsumerWidget {
                   label: 'Версия',
                   value: globalState.packageInfo.version,
                 ),
+                if (system.isMacOS) ...[
+                  const Divider(height: 1),
+                  const LoomSettingsRow(
+                    label: 'Проверить обновления',
+                    onTap: checkForAppUpdates,
+                  ),
+                ],
                 const Divider(height: 1),
                 LoomSettingsRow(
                   label: 'Исходный код и лицензия',

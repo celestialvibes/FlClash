@@ -10,6 +10,7 @@ PODS:
     - FlutterMacOS
   - setup (0.0.1):
     - FlutterMacOS
+  - Sparkle (2.9.6)
 
 DEPENDENCIES:
   - flutter_js (from `Flutter/ephemeral/.symlinks/plugins/flutter_js/macos`)
@@ -17,10 +18,12 @@ DEPENDENCIES:
   - hotkey_manager_macos (from `Flutter/ephemeral/.symlinks/plugins/hotkey_manager_macos/macos`)
   - rust_api (from `Flutter/ephemeral/.symlinks/plugins/rust_api/macos`)
   - setup (from `Flutter/ephemeral/.symlinks/plugins/setup/macos`)
+  - Sparkle (= 2.9.6)
 
 SPEC REPOS:
   trunk:
     - HotKey
+    - Sparkle
 
 EXTERNAL SOURCES:
   flutter_js:
@@ -41,7 +44,8 @@ SPEC CHECKSUMS:
   hotkey_manager_macos: a4317849af96d2430fa89944d3c58977ca089fbe
   rust_api: 112f3cfd993afe61c6662bdb30fd6e3509fb3bf8
   setup: fbca4a83aba6efbe6510b5e268c8aea0bf192d00
+  Sparkle: b8c9cf4ced217ffc708a1ca5f988a7ba877658db
 
-PODFILE CHECKSUM: b9facb167d6b7e90fef40306c3fe521e010924ac
+PODFILE CHECKSUM: 896bf77bde3902d6f618ae99c0390eb8d4f25219
 
 COCOAPODS: 1.16.2

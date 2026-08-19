@@ -26,6 +26,19 @@ class MainFlutterWindow: NSWindow {
                 result(FlutterMethodNotImplemented)
             }
         }
+
+        FlutterMethodChannel(
+            name: "com.loomhost.client/updater",
+            binaryMessenger: flutterViewController.engine.binaryMessenger
+        )
+        .setMethodCallHandler { (call: FlutterMethodCall, result: @escaping FlutterResult) in
+            guard call.method == "checkForUpdates" else {
+                result(FlutterMethodNotImplemented)
+                return
+            }
+            (NSApp.delegate as? AppDelegate)?.checkForUpdates()
+            result(nil)
+        }
         
         RegisterGeneratedPlugins(registry: flutterViewController)
         super.awakeFromNib()

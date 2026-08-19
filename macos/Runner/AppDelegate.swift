@@ -1,9 +1,19 @@
 import Cocoa
 import FlutterMacOS
+import Sparkle
 import window_ext
 
 @main
 class AppDelegate: FlutterAppDelegate {
+    private let updaterController = SPUStandardUpdaterController(
+        startingUpdater: true,
+        updaterDelegate: nil,
+        userDriverDelegate: nil
+    )
+
+    func checkForUpdates() {
+        updaterController.checkForUpdates(nil)
+    }
     
     override func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool {
         return false

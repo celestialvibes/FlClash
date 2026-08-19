@@ -26,6 +26,10 @@ class AboutView extends StatelessWidget {
   const AboutView({super.key});
 
   Future<void> _checkUpdate(BuildContext context) async {
+    if (system.isMacOS) {
+      await checkForAppUpdates();
+      return;
+    }
     final data = await globalState.safeRun<Map<String, dynamic>?>(
       request.checkForUpdate,
       title: context.appLocalizations.checkUpdate,
@@ -64,9 +68,7 @@ class AboutView extends StatelessWidget {
         ListItem(
           title: Text(appLocalizations.core),
           onTap: () {
-            globalState.openUrl(
-              'https://github.com/MetaCubeX/mihomo',
-            );
+            globalState.openUrl('https://github.com/MetaCubeX/mihomo');
           },
           trailing: const Icon(Icons.launch),
         ),

@@ -43,5 +43,13 @@
 	<string>NSApplication</string>
 	<key>NSLocationWhenInUseUsageDescription</key>
 	<string>LOOM needs location access to detect the current Wi-Fi network.</string>
+	<key>SUEnableAutomaticChecks</key>
+	<true/>
+	<key>SUAutomaticallyUpdate</key>
+	<true/>
+	<key>SUFeedURL</key>
+	<string>https://loomvpn.pro/updates/macos/appcast.xml</string>
+	<key>SUPublicEDKey</key>
+	<string>a86D1UZuVhyh1QbKB5UvDpiGPHxgOJ80I25VbFhCrvk=</string>
 </dict>
 </plist>
