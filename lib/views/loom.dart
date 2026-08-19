@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:collection/collection.dart';
 import 'package:fl_clash/common/common.dart';
 import 'package:fl_clash/database/database.dart';
@@ -32,6 +34,72 @@ bool isLoomAdblockRule(Rule rule) {
   return rule.ruleAction == RuleAction.GEOSITE &&
       rule.content?.toLowerCase() == loomAdblockGeosite &&
       rule.ruleTarget?.toUpperCase() == RuleTarget.REJECT.name;
+}
+
+const _loomDirectActions = {
+  RuleAction.DOMAIN,
+  RuleAction.DOMAIN_SUFFIX,
+  RuleAction.IP_CIDR,
+  RuleAction.IP_CIDR6,
+};
+
+bool isLoomDirectRule(Rule rule) {
+  return _loomDirectActions.contains(rule.ruleAction) &&
+      rule.ruleTarget?.toUpperCase() == RuleTarget.DIRECT.name;
+}
+
+Rule? createLoomDirectRule(String value) {
+  var input = value.trim();
+  if (input.isEmpty) return null;
+
+  final uri = Uri.tryParse(input);
+  if (uri != null &&
+      (uri.scheme == 'http' || uri.scheme == 'https') &&
+      uri.host.isNotEmpty) {
+    input = uri.host;
+  } else if (input.contains('://')) {
+    return null;
+  }
+
+  final cidr = input.split('/');
+  if (cidr.length == 2) {
+    final address = InternetAddress.tryParse(cidr.first);
+    final prefix = int.tryParse(cidr.last);
+    if (address == null || prefix == null) return null;
+    final ipv4 = address.type == InternetAddressType.IPv4;
+    if (prefix < 0 || prefix > (ipv4 ? 32 : 128)) return null;
+    return Rule.parse(
+      '${ipv4 ? 'IP-CIDR' : 'IP-CIDR6'},${address.address}/$prefix,DIRECT,no-resolve',
+    );
+  }
+  if (cidr.length != 1) return null;
+
+  final address = InternetAddress.tryParse(input);
+  if (address != null) {
+    final ipv4 = address.type == InternetAddressType.IPv4;
+    return Rule.parse(
+      '${ipv4 ? 'IP-CIDR' : 'IP-CIDR6'},${address.address}/${ipv4 ? 32 : 128},DIRECT,no-resolve',
+    );
+  }
+
+  var domain = input.toLowerCase();
+  if (domain.startsWith('*.')) {
+    domain = domain.substring(2);
+  } else if (domain.startsWith('.')) {
+    domain = domain.substring(1);
+  }
+  if (domain.endsWith('.')) domain = domain.substring(0, domain.length - 1);
+  if (domain.isEmpty ||
+      domain.length > 253 ||
+      RegExp(r'[\s,/:]').hasMatch(domain) ||
+      RegExp(r'^[0-9.]+$').hasMatch(domain)) {
+    return null;
+  }
+  final labelPattern = RegExp(r'^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$');
+  if (domain.split('.').any((label) => !labelPattern.hasMatch(label))) {
+    return null;
+  }
+  return Rule.parse('DOMAIN-SUFFIX,$domain,DIRECT');
 }
 
 Group? _watchLoomGroup(WidgetRef ref) {
@@ -70,6 +138,54 @@ Future<void> _importSubscription(BuildContext context) async {
       .addProfileFormURL(url);
 }
 
+Future<void> _applyLoomRules(WidgetRef ref, int profileId) async {
+  ref.invalidate(setupStateProvider(profileId));
+  await ref
+      .read(setupActionProvider.notifier)
+      .applyProfile(force: true, silence: true);
+}
+
+Future<void> _addLoomDirectRule(WidgetRef ref, Profile profile) async {
+  if (profile.overwriteType != OverwriteType.standard) return;
+  final value = await globalState.showCommonDialog<String>(
+    child: InputDialog(
+      title: 'Добавить исключение',
+      labelText: 'Сайт, IP или CIDR',
+      hintText: 'example.com или 192.168.1.0/24',
+      value: '',
+      inputFormatters: TextInputLimits.limit(TextInputLimits.domain),
+      validator: (value) => createLoomDirectRule(value ?? '') == null
+          ? 'Введите корректный сайт, IP или CIDR'
+          : null,
+    ),
+  );
+  final rule = createLoomDirectRule(value ?? '');
+  if (rule == null) return;
+  await globalState.safeRun(() async {
+    final current = await database.rulesDao
+        .queryProfileAddedRules(profile.id)
+        .get();
+    if (current.any((item) => item.rawValue == rule.rawValue)) {
+      globalState.showNotifier('Этот адрес уже добавлен');
+      return;
+    }
+    final ordered = rule.autoOrder(rule, null, current.firstOrNull?.order);
+    await database.rulesDao.putProfileAddedRule(profile.id, ordered);
+    await _applyLoomRules(ref, profile.id);
+  });
+}
+
+Future<void> _deleteLoomDirectRule(
+  WidgetRef ref,
+  Profile profile,
+  Rule rule,
+) async {
+  await globalState.safeRun(() async {
+    await database.rulesDao.delRules([rule.id]);
+    await _applyLoomRules(ref, profile.id);
+  });
+}
+
 Future<void> _setAdblock(
   WidgetRef ref,
   Profile profile,
@@ -83,8 +199,9 @@ Future<void> _setAdblock(
   await globalState.safeRun(() async {
     final matches = currentRules.where(isLoomAdblockRule).toList();
     if (enabled && matches.isEmpty) {
-      final rule = createLoomAdblockRule().autoOrder(
-        createLoomAdblockRule(),
+      final value = createLoomAdblockRule();
+      final rule = value.autoOrder(
+        value,
         null,
         currentRules.firstOrNull?.order,
       );
@@ -92,10 +209,63 @@ Future<void> _setAdblock(
     } else if (!enabled && matches.isNotEmpty) {
       await database.rulesDao.delRules(matches.map((rule) => rule.id));
     }
-    await ref
-        .read(setupActionProvider.notifier)
-        .applyProfile(force: true, silence: true);
+    await _applyLoomRules(ref, profile.id);
   });
+}
+
+class LoomHelloView extends StatelessWidget {
+  const LoomHelloView({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return LoomPage(
+      child: Center(
+        child: SingleChildScrollView(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 440),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                const Align(
+                  alignment: Alignment.centerLeft,
+                  child: LoomWordmark(),
+                ),
+                const SizedBox(height: 42),
+                const Text(
+                  'ДОБРО ПОЖАЛОВАТЬ\nВ LOOM.',
+                  style: TextStyle(
+                    color: loomInk,
+                    fontSize: 38,
+                    height: 0.92,
+                    fontWeight: FontWeight.w900,
+                    letterSpacing: -1.8,
+                  ),
+                ),
+                const SizedBox(height: 18),
+                const Text(
+                  'Оформите подписку — бот выдаст ссылку для подключения.',
+                  style: TextStyle(color: loomMuted, fontSize: 14, height: 1.4),
+                ),
+                const SizedBox(height: 34),
+                LoomPrimaryButton(
+                  label: 'ПОЛУЧИТЬ ПОДПИСКУ',
+                  icon: Icons.open_in_new,
+                  onPressed: () => globalState.openUrl(loomSubscriptionUrl),
+                ),
+                const SizedBox(height: 10),
+                LoomPrimaryButton(
+                  label: 'ЕСТЬ ПОДПИСКА?',
+                  outlined: true,
+                  icon: Icons.add_link,
+                  onPressed: () => _importSubscription(context),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
 }
 
 class LoomHomeView extends ConsumerWidget {
@@ -108,6 +278,7 @@ class LoomHomeView extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final profile = ref.watch(currentProfileProvider);
+    if (profile == null) return const LoomHelloView();
     final isStarted = ref.watch(isStartProvider);
     final group = _watchLoomGroup(ref);
     final proxy = _watchSelectedProxy(ref, group);
@@ -145,9 +316,7 @@ class LoomHomeView extends ConsumerWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        profile == null
-                            ? 'ДОБАВЬТЕ\nПОДПИСКУ'
-                            : isStarted
+                        isStarted
                             ? 'СОЕДИНЕНИЕ\nЗАЩИЩЕНО'
                             : 'ИНТЕРНЕТ\nБЕЗ ЗАЩИТЫ',
                         style: const TextStyle(
@@ -160,9 +329,7 @@ class LoomHomeView extends ConsumerWidget {
                       ),
                       const SizedBox(height: 12),
                       Text(
-                        profile == null
-                            ? 'Вставьте ссылку из личного кабинета.'
-                            : isStarted
+                        isStarted
                             ? 'Трафик зашифрован. Можно пользоваться интернетом.'
                             : 'Ваши данные сейчас передаются напрямую.',
                         style: const TextStyle(
@@ -176,106 +343,95 @@ class LoomHomeView extends ConsumerWidget {
                 ),
                 const SizedBox(width: 18),
                 LoomPowerButton(
-                  enabled: profile != null,
+                  enabled: true,
                   isStarted: isStarted,
-                  onPressed: profile == null
-                      ? () => _importSubscription(context)
-                      : () => ref
-                            .read(commonActionProvider.notifier)
-                            .toggleRunning(),
+                  onPressed: () =>
+                      ref.read(commonActionProvider.notifier).toggleRunning(),
                 ),
               ],
             ),
             const SizedBox(height: 28),
-            if (profile == null)
-              LoomPrimaryButton(
-                label: 'ДОБАВИТЬ ПОДПИСКУ',
-                icon: Icons.add_link,
-                onPressed: () => _importSubscription(context),
-              )
-            else ...[
-              LoomCard(
-                onTap: () => _toServers(ref),
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const LoomEyebrow('СЕРВЕР'),
-                          const SizedBox(height: 8),
-                          EmojiText(
-                            proxy?.name ?? 'Выберите сервер',
-                            maxLines: 2,
-                            overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(
-                              color: loomInk,
-                              fontSize: 16,
-                              fontWeight: FontWeight.w700,
-                            ),
-                          ),
-                          const SizedBox(height: 5),
-                          Text(
-                            group?.name ?? 'LOOM',
-                            style: const TextStyle(
-                              color: loomMuted,
-                              fontSize: 11,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    if (delay != null && delay > 0)
-                      Text(
-                        '$delay мс',
-                        style: TextStyle(
-                          color: utils.getDelayColor(delay),
-                          fontSize: 12,
-                          fontWeight: FontWeight.w700,
-                        ),
-                      ),
-                    const SizedBox(width: 8),
-                    const Icon(Icons.chevron_right, color: loomInk),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 10),
-              Row(
+            LoomCard(
+              onTap: () => _toServers(ref),
+              child: Row(
                 children: [
                   Expanded(
-                    child: LoomMetricCard(
-                      label: 'ПРОТОКОЛ',
-                      value: proxy?.type.toUpperCase() ?? '—',
-                      caption: 'Автовыбор',
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const LoomEyebrow('СЕРВЕР'),
+                        const SizedBox(height: 8),
+                        EmojiText(
+                          proxy?.name ?? 'Выберите сервер',
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                            color: loomInk,
+                            fontSize: 16,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                        const SizedBox(height: 5),
+                        Text(
+                          group?.name ?? 'LOOM',
+                          style: const TextStyle(
+                            color: loomMuted,
+                            fontSize: 11,
+                          ),
+                        ),
+                      ],
                     ),
                   ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: LoomMetricCard(
-                      label: 'ПИНГ',
-                      value: delay != null && delay > 0 ? '$delay мс' : '—',
-                      caption: delay == 0
-                          ? 'Проверяем'
-                          : delay != null && delay < 0
-                          ? 'Нет ответа'
-                          : 'Нажмите сервер',
+                  if (delay != null && delay > 0)
+                    Text(
+                      '$delay мс',
+                      style: TextStyle(
+                        color: utils.getDelayColor(delay),
+                        fontSize: 12,
+                        fontWeight: FontWeight.w700,
+                      ),
                     ),
-                  ),
+                  const SizedBox(width: 8),
+                  const Icon(Icons.chevron_right, color: loomInk),
                 ],
               ),
-              const SizedBox(height: 10),
-              if (isStarted)
-                const LoomTrafficCard()
-              else
-                LoomAdblockCard(profile: profile),
-              const SizedBox(height: 18),
-              LoomPrimaryButton(
-                label: isStarted ? 'ОТКЛЮЧИТЬСЯ' : 'ПОДКЛЮЧИТЬСЯ',
-                outlined: isStarted,
-                onPressed: () =>
-                    ref.read(commonActionProvider.notifier).toggleRunning(),
-              ),
-            ],
+            ),
+            const SizedBox(height: 10),
+            Row(
+              children: [
+                Expanded(
+                  child: LoomMetricCard(
+                    label: 'ПРОТОКОЛ',
+                    value: proxy?.type.toUpperCase() ?? '—',
+                    caption: 'Автовыбор',
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: LoomMetricCard(
+                    label: 'ПИНГ',
+                    value: delay != null && delay > 0 ? '$delay мс' : '—',
+                    caption: delay == 0
+                        ? 'Проверяем'
+                        : delay != null && delay < 0
+                        ? 'Нет ответа'
+                        : 'Нажмите сервер',
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 10),
+            if (isStarted)
+              const LoomTrafficCard()
+            else
+              LoomAdblockCard(profile: profile),
+            const SizedBox(height: 18),
+            LoomPrimaryButton(
+              label: isStarted ? 'ОТКЛЮЧИТЬСЯ' : 'ПОДКЛЮЧИТЬСЯ',
+              outlined: isStarted,
+              onPressed: () =>
+                  ref.read(commonActionProvider.notifier).toggleRunning(),
+            ),
           ],
         ),
       ),
@@ -540,6 +696,11 @@ class LoomSettingsView extends ConsumerWidget {
     final appSettings = ref.watch(appSettingProvider);
     final group = _watchLoomGroup(ref);
     final proxy = _watchSelectedProxy(ref, group);
+    final directRules = profile == null
+        ? const <Rule>[]
+        : (ref.watch(profileAddedRulesProvider(profile.id)).value ?? [])
+              .where(isLoomDirectRule)
+              .toList();
     return LoomDetailPage(
       title: 'Настройки',
       child: ListView(
@@ -595,6 +756,26 @@ class LoomSettingsView extends ConsumerWidget {
             )
           else
             LoomAdblockCard(profile: profile, compact: true),
+          const SizedBox(height: 10),
+          LoomCard(
+            padding: EdgeInsets.zero,
+            child: LoomSettingsRow(
+              label: 'Сайты напрямую',
+              value: profile == null
+                  ? 'Нужна подписка'
+                  : profile.overwriteType != OverwriteType.standard
+                  ? 'Недоступно'
+                  : '${directRules.length}',
+              onTap:
+                  profile != null &&
+                      profile.overwriteType == OverwriteType.standard
+                  ? () => BaseNavigator.push(
+                      context,
+                      LoomSplitTunnelView(profile: profile),
+                    )
+                  : null,
+            ),
+          ),
           if (system.isAndroid) ...[
             const SizedBox(height: 10),
             LoomCard(
@@ -627,6 +808,77 @@ class LoomSettingsView extends ConsumerWidget {
               ],
             ),
           ),
+        ],
+      ),
+    );
+  }
+}
+
+class LoomSplitTunnelView extends ConsumerWidget {
+  final Profile profile;
+
+  const LoomSplitTunnelView({super.key, required this.profile});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final rules = (ref.watch(profileAddedRulesProvider(profile.id)).value ?? [])
+        .where(isLoomDirectRule)
+        .toList();
+    return LoomDetailPage(
+      title: 'Сайты напрямую',
+      child: ListView(
+        children: [
+          const LoomCard(
+            child: Text(
+              'Добавленные сайты и адреса обходят VPN. Домен включает все его поддомены.',
+              style: TextStyle(color: loomMuted, fontSize: 12, height: 1.4),
+            ),
+          ),
+          const SizedBox(height: 10),
+          LoomPrimaryButton(
+            label: 'ДОБАВИТЬ САЙТ ИЛИ АДРЕС',
+            icon: Icons.add,
+            onPressed: () => _addLoomDirectRule(ref, profile),
+          ),
+          const SizedBox(height: 18),
+          if (rules.isEmpty)
+            const Center(
+              child: Text(
+                'Исключений пока нет',
+                style: TextStyle(color: loomMuted, fontSize: 12),
+              ),
+            )
+          else
+            LoomCard(
+              padding: EdgeInsets.zero,
+              child: Column(
+                children: [
+                  for (final (index, rule) in rules.indexed) ...[
+                    if (index > 0) const Divider(height: 1),
+                    ListTile(
+                      title: Text(
+                        rule.content ?? '',
+                        style: const TextStyle(
+                          color: loomInk,
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      subtitle: Text(
+                        rule.ruleAction.value,
+                        style: const TextStyle(color: loomMuted, fontSize: 10),
+                      ),
+                      trailing: IconButton(
+                        tooltip: 'Удалить',
+                        onPressed: () =>
+                            _deleteLoomDirectRule(ref, profile, rule),
+                        icon: const Icon(Icons.delete_outline, size: 20),
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            ),
         ],
       ),
     );

@@ -112,6 +112,17 @@ void main() {
           addedRules: const [
             Rule(
               ruleAction: RuleAction.DOMAIN_SUFFIX,
+              content: 'direct.example',
+              ruleTarget: 'DIRECT',
+            ),
+            Rule(
+              ruleAction: RuleAction.IP_CIDR,
+              content: '10.0.0.0/8',
+              ruleTarget: 'DIRECT',
+              noResolve: true,
+            ),
+            Rule(
+              ruleAction: RuleAction.DOMAIN_SUFFIX,
               content: 'added.example',
               ruleTarget: 'MATCH',
             ),
@@ -141,6 +152,8 @@ void main() {
         startsWith('/profiles/providers/7/rules/'),
       );
       expect(config['rules'], [
+        'DOMAIN-SUFFIX,direct.example,DIRECT',
+        'IP-CIDR,10.0.0.0/8,DIRECT,no-resolve',
         'DOMAIN-SUFFIX,added.example,Original',
         'DOMAIN,existing.example,DIRECT',
         'MATCH,Original',

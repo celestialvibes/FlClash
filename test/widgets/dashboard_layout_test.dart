@@ -1,68 +1,33 @@
 import 'package:fl_clash/common/common.dart';
 import 'package:fl_clash/common/theme.dart';
 import 'package:fl_clash/l10n/l10n.dart';
-import 'package:fl_clash/models/models.dart';
 import 'package:fl_clash/providers/providers.dart';
 import 'package:fl_clash/state.dart';
-import 'package:fl_clash/views/dashboard/dashboard.dart';
-import 'package:fl_clash/widgets/grid.dart';
+import 'package:fl_clash/views/loom.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
-  testWidgets('dashboard leads with subscription import', (tester) async {
-    final container = ProviderContainer(
-      overrides: [
-        currentProfileProvider.overrideWithValue(null),
-        isStartProvider.overrideWithValue(false),
-      ],
-    );
-    addTearDown(container.dispose);
-    globalState.container = container;
-
+  testWidgets('hello screen leads with subscription actions', (tester) async {
     await tester.pumpWidget(
-      UncontrolledProviderScope(
-        container: container,
-        child: const _TestApp(child: DashboardView()),
+      ProviderScope(
+        overrides: [viewSizeProvider.overrideWithValue(const Size(800, 600))],
+        child: const _TestApp(child: LoomHelloView()),
       ),
     );
 
     expect(find.text('LOOM.'), findsOneWidget);
-    expect(find.text('Import a subscription to get started'), findsOneWidget);
-    expect(find.text('Import subscription'), findsOneWidget);
-    expect(find.byType(Grid), findsNothing);
-    expect(tester.takeException(), null);
-  });
+    expect(find.text('ДОБРО ПОЖАЛОВАТЬ\nВ LOOM.'), findsOneWidget);
+    expect(find.text('ПОЛУЧИТЬ ПОДПИСКУ'), findsOneWidget);
+    expect(find.text('ЕСТЬ ПОДПИСКА?'), findsOneWidget);
 
-  testWidgets('dashboard exposes server and connect actions', (tester) async {
-    final container = ProviderContainer(
-      overrides: [
-        currentProfileProvider.overrideWithValue(
-          const Profile(
-            id: 1,
-            label: 'My subscription',
-            autoUpdateDuration: Duration(days: 1),
-          ),
-        ),
-        isStartProvider.overrideWithValue(false),
-      ],
-    );
-    addTearDown(container.dispose);
-    globalState.container = container;
+    await tester.tap(find.text('ЕСТЬ ПОДПИСКА?'));
+    await tester.pumpAndSettle();
 
-    await tester.pumpWidget(
-      UncontrolledProviderScope(
-        container: container,
-        child: const _TestApp(child: DashboardView()),
-      ),
-    );
-
-    expect(find.text('My subscription'), findsOneWidget);
-    expect(find.text('Servers'), findsOneWidget);
-    expect(find.text('Start'), findsOneWidget);
-    expect(find.text('Subscriptions'), findsOneWidget);
+    expect(find.text('Добавить подписку LOOM'), findsOneWidget);
+    expect(find.byType(TextField), findsOneWidget);
     expect(tester.takeException(), null);
   });
 }
