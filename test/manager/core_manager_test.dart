@@ -3,6 +3,7 @@ import 'package:fl_clash/core/interface.dart';
 import 'package:fl_clash/enum/enum.dart';
 import 'package:fl_clash/manager/core_manager.dart';
 import 'package:fl_clash/models/models.dart';
+import 'package:fl_clash/providers/action.dart';
 import 'package:fl_clash/providers/app.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -18,8 +19,17 @@ void main() {
     final coreInterface = _MockCoreHandlerInterface();
     when(() => coreInterface.stopLog()).thenAnswer((_) {});
     final controller = CoreController.test(coreInterface);
-    final container = ProviderContainer();
+    late _CrashSetupAction setupAction;
+    final container = ProviderContainer(
+      overrides: [
+        setupActionProvider.overrideWith(() {
+          setupAction = _CrashSetupAction();
+          return setupAction;
+        }),
+      ],
+    );
     addTearDown(container.dispose);
+    container.read(setupActionProvider);
     await tester.pumpWidget(
       UncontrolledProviderScope(
         container: container,
@@ -44,9 +54,19 @@ void main() {
 
     expect(container.read(coreStatusProvider), CoreStatus.disconnected);
     expect(transitions, [CoreStatus.disconnected]);
+    expect(setupAction.stopCount, 1);
     verifyNever(() => coreInterface.stop());
 
     await tester.pumpWidget(const SizedBox());
     tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed);
   });
+}
+
+class _CrashSetupAction extends SetupAction {
+  int stopCount = 0;
+
+  @override
+  Future<void> setRunning(bool running, {bool initialize = false}) async {
+    if (!running) stopCount++;
+  }
 }

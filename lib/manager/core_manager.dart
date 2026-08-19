@@ -107,6 +107,14 @@ class _CoreContainerState extends ConsumerState<CoreManager>
       return;
     }
     ref.read(coreStatusProvider.notifier).value = CoreStatus.disconnected;
+    try {
+      await ref.read(setupActionProvider.notifier).setRunning(false);
+    } catch (error) {
+      commonPrint.log(
+        'Unable to stop after Core crash: $error',
+        logLevel: LogLevel.error,
+      );
+    }
     if (WidgetsBinding.instance.lifecycleState == AppLifecycleState.resumed) {
       context.showNotifier(message);
     }
