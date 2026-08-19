@@ -1,23 +1,21 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
 import 'package:collection/collection.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
-import 'package:crypto/crypto.dart';
-import 'package:device_info_plus/device_info_plus.dart';
 import 'package:fl_clash/common/common.dart';
+import 'package:fl_clash/common/loom_support.dart';
 import 'package:fl_clash/database/database.dart';
 import 'package:fl_clash/enum/enum.dart';
 import 'package:fl_clash/models/models.dart';
 import 'package:fl_clash/providers/providers.dart';
 import 'package:fl_clash/state.dart';
 import 'package:fl_clash/views/access.dart';
-import 'package:fl_clash/views/logs.dart';
 import 'package:fl_clash/views/proxies/common.dart';
 import 'package:fl_clash/widgets/widgets.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 
 const loomAccent = Color(0xFFFF3300);
@@ -26,63 +24,144 @@ const loomInk = Color(0xFF0F0F0F);
 const loomMuted = Color(0xFF666666);
 const loomBorder = Color(0xFFD8D8D5);
 
-const loomSupportUrl = 'https://t.me/l00mvpnsupport';
 const loomSubscriptionUrl = 'https://t.me/l00mvpn_bot';
 const loomGuideUrl = 'https://loomhost.ru/start';
-const loomStatusUrl = 'https://loomhost.ru/';
 const loomAdblockGeosite = 'category-ads-all';
 
-String buildLoomDiagnosticReport({
+enum LoomDiagnosticProxySelection { none, direct, automatic, named }
+
+enum LoomDiagnosticConnectivity { offline, wifi, mobile, wired, vpn, other }
+
+enum LoomDiagnosticFreshness { unknown, fresh, stale }
+
+enum LoomDiagnosticExpiry { unknown, expired, soon, month, later }
+
+enum LoomDiagnosticQuota { unknown, exhausted, low, available }
+
+String buildLoomSafeDiagnosticReport({
   required String appVersion,
-  required String systemName,
-  required String deviceName,
-  required String network,
-  required String publicIp,
-  required String countryCode,
-  required String vpnState,
-  required String coreState,
-  required String profileUrl,
-  required String server,
-  required String protocol,
-  required bool adblockEnabled,
-  required int directRoutes,
+  required String platform,
+  required bool vpnConnected,
+  required CoreStatus coreStatus,
+  required String? proxyType,
+  required LoomDiagnosticProxySelection proxySelection,
+  required bool subscriptionPresent,
+  required LoomDiagnosticFreshness subscriptionFreshness,
+  required LoomDiagnosticExpiry subscriptionExpiry,
+  required LoomDiagnosticQuota subscriptionQuota,
+  required LoomDiagnosticConnectivity connectivity,
 }) {
-  final supportId = profileUrl.isEmpty
-      ? '—'
-      : sha256.convert(utf8.encode(profileUrl)).toString().substring(0, 12);
+  final safeVersion = RegExp(
+    r'^[0-9]+(?:\.[0-9]+){1,3}(?:-[0-9A-Za-z.]+)?(?:\+[0-9A-Za-z.]+)?$',
+  ).hasMatch(appVersion)
+      ? appVersion
+      : 'unknown';
+  final safePlatform = switch (platform.toLowerCase()) {
+    'macos' => 'macos',
+    'android' => 'android',
+    _ => 'other',
+  };
+  final safeProxyType = switch (proxyType?.toLowerCase()) {
+    'direct' => 'direct',
+    'reject' => 'reject',
+    'ss' || 'shadowsocks' => 'shadowsocks',
+    'ssr' => 'shadowsocksr',
+    'vmess' => 'vmess',
+    'vless' => 'vless',
+    'trojan' => 'trojan',
+    'wireguard' => 'wireguard',
+    'hysteria' => 'hysteria',
+    'hysteria2' => 'hysteria2',
+    'tuic' => 'tuic',
+    'snell' => 'snell',
+    'ssh' => 'ssh',
+    'anytls' => 'anytls',
+    _ => 'other',
+  };
   return [
     'LOOM diagnostics',
-    'Support ID: $supportId',
-    'App: $appVersion',
-    'System: $systemName',
-    'Device: $deviceName',
-    'Network: $network',
-    'Public IP: $publicIp${countryCode.isEmpty ? '' : ' ($countryCode)'}',
-    'VPN: $vpnState',
-    'Core: $coreState',
-    'Server: $server',
-    'Protocol: $protocol',
-    'Adblock: ${adblockEnabled ? 'on' : 'off'}',
-    'Direct routes: $directRoutes',
+    'App version: $safeVersion',
+    'Platform: $safePlatform',
+    'VPN: ${vpnConnected ? 'connected' : 'disconnected'}',
+    'Core: ${coreStatus.name}',
+    'Proxy type: $safeProxyType',
+    'Proxy selection: ${proxySelection.name}',
+    'Subscription: ${subscriptionPresent ? 'present' : 'missing'}',
+    'Subscription freshness: ${subscriptionFreshness.name}',
+    'Subscription expiry: ${subscriptionExpiry.name}',
+    'Subscription quota: ${subscriptionQuota.name}',
+    'Connectivity: ${connectivity.name}',
   ].join('\n');
 }
 
-Future<({String device, String system})> _loomDeviceInfo() async {
-  final info = await DeviceInfoPlugin().deviceInfo;
-  return switch (info) {
-    MacOsDeviceInfo(:final modelName, :final arch, :final osRelease) => (
-      device: '$modelName ($arch)',
-      system: 'macOS $osRelease',
-    ),
-    AndroidDeviceInfo(:final manufacturer, :final model, :final version) => (
-      device: '$manufacturer $model',
-      system: 'Android ${version.release} (SDK ${version.sdkInt})',
-    ),
-    _ => (
-      device: Platform.operatingSystem,
-      system: Platform.operatingSystemVersion,
-    ),
-  };
+LoomDiagnosticConnectivity _loomConnectivity(
+  Iterable<ConnectivityResult> values,
+) {
+  if (values.isEmpty ||
+      values.every((value) => value == ConnectivityResult.none)) {
+    return LoomDiagnosticConnectivity.offline;
+  }
+  if (values.contains(ConnectivityResult.wifi)) {
+    return LoomDiagnosticConnectivity.wifi;
+  }
+  if (values.contains(ConnectivityResult.mobile) ||
+      values.contains(ConnectivityResult.satellite)) {
+    return LoomDiagnosticConnectivity.mobile;
+  }
+  if (values.contains(ConnectivityResult.ethernet)) {
+    return LoomDiagnosticConnectivity.wired;
+  }
+  if (values.contains(ConnectivityResult.vpn)) {
+    return LoomDiagnosticConnectivity.vpn;
+  }
+  return LoomDiagnosticConnectivity.other;
+}
+
+LoomDiagnosticProxySelection _loomProxySelection(Proxy? proxy, Group? group) {
+  if (proxy == null) return LoomDiagnosticProxySelection.none;
+  if (proxy.name.toUpperCase() == UsedProxy.DIRECT.name ||
+      proxy.type.toLowerCase() == 'direct') {
+    return LoomDiagnosticProxySelection.direct;
+  }
+  if (group != null && group.type != GroupType.Selector) {
+    return LoomDiagnosticProxySelection.automatic;
+  }
+  return LoomDiagnosticProxySelection.named;
+}
+
+LoomDiagnosticFreshness _loomSubscriptionFreshness(Profile? profile) {
+  final updated = profile?.lastUpdateDate;
+  if (updated == null) return LoomDiagnosticFreshness.unknown;
+  final age = DateTime.now().difference(updated);
+  if (age.isNegative) return LoomDiagnosticFreshness.unknown;
+  return age <= const Duration(days: 2)
+      ? LoomDiagnosticFreshness.fresh
+      : LoomDiagnosticFreshness.stale;
+}
+
+LoomDiagnosticExpiry _loomSubscriptionExpiry(Profile? profile) {
+  final expire = profile?.subscriptionInfo?.expire ?? 0;
+  if (expire <= 0) return LoomDiagnosticExpiry.unknown;
+  final remaining = expire - DateTime.now().millisecondsSinceEpoch ~/ 1000;
+  if (remaining < 0) return LoomDiagnosticExpiry.expired;
+  if (remaining <= const Duration(days: 3).inSeconds) {
+    return LoomDiagnosticExpiry.soon;
+  }
+  if (remaining <= const Duration(days: 30).inSeconds) {
+    return LoomDiagnosticExpiry.month;
+  }
+  return LoomDiagnosticExpiry.later;
+}
+
+LoomDiagnosticQuota _loomSubscriptionQuota(Profile? profile) {
+  final info = profile?.subscriptionInfo;
+  if (info == null || info.total <= 0) return LoomDiagnosticQuota.unknown;
+  final used = info.upload + info.download;
+  if (used >= info.total) return LoomDiagnosticQuota.exhausted;
+  if ((info.total - used) / info.total <= 0.1) {
+    return LoomDiagnosticQuota.low;
+  }
+  return LoomDiagnosticQuota.available;
 }
 
 Rule createLoomAdblockRule() =>
@@ -102,7 +181,17 @@ const _loomDirectActions = {
 };
 
 bool isLoomDirectRule(Rule rule) {
-  return _loomDirectActions.contains(rule.ruleAction) &&
+  return !isLoomSupportDirectRule(rule) &&
+      _loomDirectActions.contains(rule.ruleAction) &&
+      rule.ruleTarget?.toUpperCase() == RuleTarget.DIRECT.name;
+}
+
+Rule createLoomSupportDirectRule() =>
+    Rule.parse('DOMAIN-SUFFIX,$loomSupportApiHost,DIRECT');
+
+bool isLoomSupportDirectRule(Rule rule) {
+  return rule.ruleAction == RuleAction.DOMAIN_SUFFIX &&
+      rule.content?.toLowerCase() == loomSupportApiHost &&
       rule.ruleTarget?.toUpperCase() == RuleTarget.DIRECT.name;
 }
 
@@ -215,6 +304,23 @@ Future<void> _applyLoomRules(WidgetRef ref, int profileId) async {
   await ref
       .read(setupActionProvider.notifier)
       .applyProfile(force: true, silence: true);
+}
+
+Future<void> _ensureLoomSupportDirectRule(
+  WidgetRef ref,
+  Profile? profile,
+) async {
+  if (profile == null || profile.overwriteType != OverwriteType.standard) {
+    return;
+  }
+  final current = await database.rulesDao
+      .queryProfileAddedRules(profile.id)
+      .get();
+  if (current.any(isLoomSupportDirectRule)) return;
+  final value = createLoomSupportDirectRule();
+  final rule = value.autoOrder(value, null, current.firstOrNull?.order);
+  await database.rulesDao.putProfileAddedRule(profile.id, rule);
+  await _applyLoomRules(ref, profile.id);
 }
 
 Future<void> _addLoomDirectRule(WidgetRef ref, Profile profile) async {
@@ -330,6 +436,13 @@ class LoomHelloView extends StatelessWidget {
                   outlined: true,
                   icon: Icons.add_link,
                   onPressed: () => _importSubscription(context),
+                ),
+                const SizedBox(height: 12),
+                TextButton.icon(
+                  onPressed: () =>
+                      BaseNavigator.push(context, const LoomSupportView()),
+                  icon: const Icon(Icons.support_agent_outlined, size: 18),
+                  label: const Text('Нужна помощь?'),
                 ),
               ],
             ),
@@ -885,9 +998,8 @@ class LoomSettingsView extends ConsumerWidget {
                 const Divider(height: 1),
                 LoomSettingsRow(
                   label: 'Исходный код и лицензия',
-                  onTap: () => globalState.openUrl(
-                    'https://github.com/$repository',
-                  ),
+                  onTap: () =>
+                      globalState.openUrl('https://github.com/$repository'),
                 ),
               ],
             ),
@@ -969,130 +1081,470 @@ class LoomSplitTunnelView extends ConsumerWidget {
   }
 }
 
-class LoomSupportView extends ConsumerWidget {
+class LoomSupportView extends ConsumerStatefulWidget {
   const LoomSupportView({super.key});
 
-  Future<void> _copyDiagnostics(
-    BuildContext context,
-    WidgetRef ref, {
-    required Profile? profile,
-    required Proxy? proxy,
-    required bool isStarted,
-    required CoreStatus coreStatus,
-    required IpInfo? ipInfo,
-    required List<Rule> rules,
-  }) async {
-    final report = await globalState.safeRun<String>(() async {
-      final device = await _loomDeviceInfo();
-      final connections = await Connectivity().checkConnectivity();
-      final network = connections
-          .where((item) => item != ConnectivityResult.none)
-          .map((item) => item.name)
-          .join(', ');
-      return buildLoomDiagnosticReport(
-        appVersion: globalState.packageInfo.version,
-        systemName: device.system,
-        deviceName: device.device,
-        network: network.isEmpty ? 'unknown' : network,
-        publicIp: ipInfo?.ip ?? 'unknown',
-        countryCode: ipInfo?.countryCode ?? '',
-        vpnState: isStarted ? 'connected' : 'disconnected',
-        coreState: coreStatus.name,
-        profileUrl: profile?.url ?? '',
-        server: proxy?.name ?? 'unknown',
-        protocol: proxy?.type ?? 'unknown',
-        adblockEnabled: rules.any(isLoomAdblockRule),
-        directRoutes: rules.where(isLoomDirectRule).length,
-      );
-    }, title: 'Диагностика');
-    if (report == null || !context.mounted) return;
+  @override
+  ConsumerState<LoomSupportView> createState() => _LoomSupportViewState();
+}
 
-    final confirmed = await globalState.showMessage(
-      title: 'Скопировать диагностику?',
-      message: TextSpan(
-        text:
-            'В отчёт войдут модель устройства, версия ОС, тип сети, публичный IP и состояние VPN. Ссылка подписки, ключи, содержимое трафика и логи не включаются.\n\n$report',
-      ),
-      confirmText: 'СКОПИРОВАТЬ',
-    );
-    if (confirmed != true) return;
-    await Clipboard.setData(ClipboardData(text: report));
-    globalState.showNotifier(
-      'Диагностика скопирована. Отправьте её в чат поддержки.',
+class _LoomSupportViewState extends ConsumerState<LoomSupportView>
+    with WidgetsBindingObserver, ActivePollingMixin<LoomSupportView> {
+  late final LoomSupportClient _client;
+  final _textController = TextEditingController();
+  final _scrollController = ScrollController();
+  final List<LoomSupportMessage> _messages = [];
+  bool _loading = true;
+  bool _ready = false;
+  bool _sending = false;
+  bool _directRuleReady = false;
+  int? _busyActionId;
+  int _afterId = 0;
+  String? _error;
+
+  @override
+  Duration get pollInterval => const Duration(seconds: 4);
+
+  @override
+  void initState() {
+    super.initState();
+    _client = LoomSupportClient(
+      platform: Platform.operatingSystem,
+      appVersion: globalState.packageInfo.version,
     );
   }
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final profile = ref.watch(currentProfileProvider);
-    final group = _watchLoomGroup(ref);
-    final proxy = _watchSelectedProxy(ref, group);
-    final isStarted = ref.watch(isStartProvider);
-    final coreStatus = ref.watch(coreStatusProvider);
-    final ipInfo = ref.watch(
-      networkDetectionProvider.select((state) => state.ipInfo),
+  void dispose() {
+    _textController.dispose();
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Future<void> poll(PollGuard isCurrent) async {
+    try {
+      if (!_directRuleReady) {
+        await _ensureLoomSupportDirectRule(
+          ref,
+          ref.read(currentProfileProvider),
+        );
+        _directRuleReady = true;
+      }
+      if (!_ready) {
+        await _client.ensureOpenThread();
+        _ready = true;
+      }
+      final previousSupportId = _client.credential?.supportId;
+      final messages = await _client.listMessages(afterId: _afterId);
+      if (!isCurrent()) return;
+      setState(() {
+        if (previousSupportId != null &&
+            previousSupportId != _client.credential?.supportId) {
+          _messages.clear();
+        }
+        _merge(messages);
+        _loading = false;
+        _error = null;
+      });
+    } catch (_) {
+      if (!isCurrent()) return;
+      setState(() {
+        _loading = false;
+        _error = 'Не удалось связаться с поддержкой';
+      });
+    }
+  }
+
+  void _merge(Iterable<LoomSupportMessage> incoming) {
+    for (final message in incoming) {
+      final index = _messages.indexWhere((item) => item.id == message.id);
+      if (index == -1) {
+        _messages.add(message);
+      } else {
+        _messages[index] = message;
+      }
+    }
+    _messages.sort((a, b) => a.id.compareTo(b.id));
+    if (_messages.isNotEmpty) _afterId = _messages.last.id;
+    _scrollToEnd();
+  }
+
+  void _scrollToEnd() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!_scrollController.hasClients) return;
+      _scrollController.animateTo(
+        _scrollController.position.maxScrollExtent,
+        duration: const Duration(milliseconds: 180),
+        curve: Curves.easeOut,
+      );
+    });
+  }
+
+  Future<void> _sendText([String? generatedText]) async {
+    final text = (generatedText ?? _textController.text).trim();
+    if (text.isEmpty || _sending || !_ready) return;
+    if (utf8.encode(text).length > 4096) {
+      globalState.showNotifier('Сообщение слишком длинное');
+      return;
+    }
+    setState(() {
+      _sending = true;
+      _error = null;
+    });
+    try {
+      final message = await _client.postText(text);
+      if (!mounted) return;
+      setState(() {
+        _merge([message]);
+        if (generatedText == null) _textController.clear();
+      });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() => _error = 'Не удалось отправить сообщение');
+    } finally {
+      if (mounted) setState(() => _sending = false);
+    }
+  }
+
+  Future<String> _diagnosticReport() async {
+    final profile = ref.read(currentProfileProvider);
+    final groups = ref.read(currentGroupsStateProvider).value;
+    final group =
+        groups.firstWhereOrNull((item) => item.name == 'LOOM') ??
+        groups.firstWhereOrNull((item) => item.type == GroupType.Selector) ??
+        groups.firstOrNull;
+    final selectedName = group == null
+        ? null
+        : ref.read(selectedProxyNameProvider(group.name));
+    final proxy =
+        group?.all.firstWhereOrNull((item) => item.name == selectedName) ??
+        group?.all.firstOrNull;
+    final connections = await Connectivity().checkConnectivity();
+    return buildLoomSafeDiagnosticReport(
+      appVersion: globalState.packageInfo.version,
+      platform: Platform.operatingSystem,
+      vpnConnected: ref.read(isStartProvider),
+      coreStatus: ref.read(coreStatusProvider),
+      proxyType: proxy?.type,
+      proxySelection: _loomProxySelection(proxy, group),
+      subscriptionPresent: profile != null,
+      subscriptionFreshness: _loomSubscriptionFreshness(profile),
+      subscriptionExpiry: _loomSubscriptionExpiry(profile),
+      subscriptionQuota: _loomSubscriptionQuota(profile),
+      connectivity: _loomConnectivity(connections),
     );
-    final rules = profile == null
-        ? const <Rule>[]
-        : ref.watch(profileAddedRulesProvider(profile.id)).value ?? const [];
+  }
+
+  Future<void> _respond(
+    LoomSupportMessage message, {
+    required bool accept,
+    String? choiceId,
+  }) async {
+    if (!message.isPendingAction ||
+        !message.isSupportedAction ||
+        _busyActionId != null ||
+        _sending) {
+      return;
+    }
+    final profile = ref.read(currentProfileProvider);
+    if (accept &&
+        (message.actionKind == 'refresh_subscription_v1' ||
+            message.actionPayload['screen'] == 'split_tunneling') &&
+        profile == null) {
+      globalState.showNotifier('Сначала добавьте подписку');
+      return;
+    }
+
+    String? report;
+    if (accept && message.actionKind == 'request_diagnostics_v1') {
+      report = await _diagnosticReport();
+      if (!mounted) return;
+      final confirmed = await globalState.showMessage(
+        title: 'Отправить диагностику?',
+        message: TextSpan(
+          text:
+              'В поддержку уйдут только версия клиента и общие статусы VPN, сети и подписки. IP, модель устройства, версия ОС, Wi-Fi SSID, имя сервера, ссылка подписки, логи, файлы и скриншоты не отправляются.\n\n$report',
+        ),
+        confirmText: 'ОТПРАВИТЬ',
+      );
+      if (confirmed != true) return;
+    }
+
+    setState(() {
+      _busyActionId = message.id;
+      _error = null;
+    });
+    try {
+      final updated = await _client.respondToAction(
+        message.id,
+        accept: accept,
+        choiceId: choiceId,
+      );
+      if (!mounted) return;
+      setState(() => _merge([updated]));
+      if (!accept) return;
+      switch (message.actionKind) {
+        case 'request_diagnostics_v1':
+          await _sendText('Диагностика с согласия пользователя:\n$report');
+          break;
+        case 'refresh_subscription_v1':
+          await ref
+              .read(profilesActionProvider.notifier)
+              .updateProfile(profile!, showLoading: true);
+          globalState.showNotifier('Подписка обновлена');
+          break;
+        case 'open_screen_v1':
+          await _openScreen(message.actionPayload['screen'] as String);
+          break;
+      }
+    } catch (_) {
+      if (mounted) {
+        setState(() => _error = 'Действие не выполнено. Попробуйте ещё раз');
+      }
+    } finally {
+      if (mounted) setState(() => _busyActionId = null);
+    }
+  }
+
+  Future<void> _openScreen(String screen) async {
+    switch (screen) {
+      case 'home':
+        ref.read(currentPageLabelProvider.notifier).toPage(PageLabel.dashboard);
+        Navigator.of(context).popUntil((route) => route.isFirst);
+        return;
+      case 'routes':
+        ref.read(currentPageLabelProvider.notifier).toPage(PageLabel.proxies);
+        Navigator.of(context).popUntil((route) => route.isFirst);
+        return;
+      case 'statistics':
+        ref
+            .read(currentPageLabelProvider.notifier)
+            .toPage(PageLabel.statistics);
+        Navigator.of(context).popUntil((route) => route.isFirst);
+        return;
+      case 'settings':
+        stopPolling();
+        await BaseNavigator.push(context, const LoomSettingsView());
+        if (mounted) restartPolling();
+        return;
+      case 'split_tunneling':
+        final profile = ref.read(currentProfileProvider);
+        if (profile == null) return;
+        stopPolling();
+        await BaseNavigator.push(
+          context,
+          LoomSplitTunnelView(profile: profile),
+        );
+        if (mounted) restartPolling();
+        return;
+      case 'support':
+        return;
+    }
+  }
+
+  String _actionTitle(LoomSupportMessage message) =>
+      switch (message.actionKind) {
+        'choice_v1' =>
+          message.actionPayload['prompt'] as String? ?? 'Выберите вариант',
+        'request_diagnostics_v1' => 'Отправить диагностику',
+        'refresh_subscription_v1' => 'Обновить подписку',
+        'open_screen_v1' => 'Открыть экран в приложении',
+        _ => 'Неподдерживаемое действие',
+      };
+
+  Widget _message(LoomSupportMessage message) {
+    if (message.kind == 'action') return _action(message);
+    final mine = message.senderKind == 'client';
+    return Align(
+      alignment: mine ? Alignment.centerRight : Alignment.centerLeft,
+      child: Container(
+        constraints: const BoxConstraints(maxWidth: 440),
+        margin: const EdgeInsets.only(bottom: 8),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+        decoration: BoxDecoration(
+          color: mine ? loomAccent : Colors.white,
+          border: mine ? null : Border.all(color: loomBorder),
+          borderRadius: BorderRadius.circular(14),
+        ),
+        child: SelectableText(
+          message.text,
+          style: TextStyle(
+            color: mine ? Colors.white : loomInk,
+            fontSize: 13,
+            height: 1.35,
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _action(LoomSupportMessage message) {
+    final pending = message.isPendingAction && message.isSupportedAction;
+    final busy = _busyActionId == message.id;
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 10),
+      child: LoomCard(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            const LoomEyebrow('ЗАПРОС ОПЕРАТОРА'),
+            const SizedBox(height: 8),
+            Text(
+              _actionTitle(message),
+              style: const TextStyle(
+                color: loomInk,
+                fontSize: 14,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+            if (message.actionKind == 'request_diagnostics_v1') ...[
+              const SizedBox(height: 6),
+              const Text(
+                'Только общие статусы. Без IP, данных устройства, имени сервера, логов и ссылки подписки.',
+                style: TextStyle(color: loomMuted, fontSize: 10, height: 1.35),
+              ),
+            ],
+            const SizedBox(height: 12),
+            if (busy)
+              const Center(child: CircularProgressIndicator(strokeWidth: 2))
+            else if (pending && message.actionKind == 'choice_v1') ...[
+              for (final choice in message.choices)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 6),
+                  child: OutlinedButton(
+                    onPressed: () =>
+                        _respond(message, accept: true, choiceId: choice.id),
+                    child: Text(choice.label),
+                  ),
+                ),
+              TextButton(
+                onPressed: () => _respond(message, accept: false),
+                child: const Text('ОТКЛОНИТЬ'),
+              ),
+            ] else if (pending)
+              Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton(
+                      onPressed: () => _respond(message, accept: false),
+                      child: const Text('ОТКЛОНИТЬ'),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: FilledButton(
+                      onPressed: () => _respond(message, accept: true),
+                      child: const Text('РАЗРЕШИТЬ'),
+                    ),
+                  ),
+                ],
+              )
+            else
+              Text(switch (message.actionState) {
+                'accepted' => 'Разрешено',
+                'declined' => 'Отклонено',
+                _ => 'Запрос истёк или не поддерживается',
+              }, style: const TextStyle(color: loomMuted, fontSize: 11)),
+          ],
+        ),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final supportId = _client.credential?.supportId;
     return LoomDetailPage(
       title: 'Поддержка',
-      child: ListView(
+      child: Column(
         children: [
-          LoomLinkCard(
-            icon: Icons.menu_book_outlined,
-            title: 'База знаний',
-            subtitle: 'Настройка и ответы на частые вопросы',
-            onTap: () => globalState.openUrl(loomGuideUrl),
+          Row(
+            children: [
+              const Icon(Icons.support_agent_outlined, size: 18),
+              const SizedBox(width: 8),
+              const Expanded(
+                child: Text(
+                  'Чат с командой LOOM',
+                  style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700),
+                ),
+              ),
+              if (supportId != null)
+                Text(
+                  'ID ${supportId.length > 8 ? supportId.substring(0, 8) : supportId}',
+                  style: const TextStyle(color: loomMuted, fontSize: 9),
+                ),
+            ],
           ),
-          const SizedBox(height: 10),
-          LoomLinkCard(
-            icon: Icons.troubleshoot_outlined,
-            title: 'Подготовить диагностику',
-            subtitle: 'Версия, устройство, сеть и состояние VPN',
-            onTap: () => _copyDiagnostics(
-              context,
-              ref,
-              profile: profile,
-              proxy: proxy,
-              isStarted: isStarted,
-              coreStatus: coreStatus,
-              ipInfo: ipInfo,
-              rules: rules,
-            ),
-          ),
-          const SizedBox(height: 10),
-          LoomLinkCard(
-            icon: Icons.mail_outline,
-            title: 'Открыть чат поддержки',
-            subtitle: '@l00mvpnsupport',
-            onTap: () => globalState.openUrl(loomSupportUrl),
-          ),
-          const SizedBox(height: 10),
-          LoomLinkCard(
-            icon: Icons.send_outlined,
-            title: 'Telegram-бот',
-            subtitle: 'Покупка, продление и управление',
-            onTap: () => globalState.openUrl(loomSubscriptionUrl),
-          ),
-          const SizedBox(height: 10),
-          LoomLinkCard(
-            icon: Icons.receipt_long_outlined,
-            title: 'Журнал подключения',
-            subtitle: 'Техническая диагностика клиента',
-            onTap: () => BaseNavigator.push(context, const LogsView()),
-          ),
-          const SizedBox(height: 24),
-          LoomCard(
-            onTap: () => globalState.openUrl(loomStatusUrl),
-            child: const Row(
-              children: [
-                Icon(Icons.circle, color: Color(0xFF14963C), size: 10),
-                SizedBox(width: 10),
-                Expanded(child: Text('Проверить статус сервисов')),
-                Icon(Icons.open_in_new, size: 18),
+          if (_error != null) ...[
+            const SizedBox(height: 8),
+            MaterialBanner(
+              content: Text(_error!, style: const TextStyle(fontSize: 11)),
+              actions: [
+                TextButton(
+                  onPressed: restartPolling,
+                  child: const Text('ПОВТОРИТЬ'),
+                ),
               ],
             ),
+          ],
+          const SizedBox(height: 10),
+          Expanded(
+            child: _loading
+                ? const Center(child: CircularProgressIndicator(strokeWidth: 2))
+                : _messages.isEmpty
+                ? const Center(
+                    child: Text(
+                      'Опишите проблему — оператор ответит здесь.',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(color: loomMuted, fontSize: 12),
+                    ),
+                  )
+                : ListView.builder(
+                    controller: _scrollController,
+                    itemCount: _messages.length,
+                    itemBuilder: (_, index) => _message(_messages[index]),
+                  ),
+          ),
+          const SizedBox(height: 10),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              Expanded(
+                child: TextField(
+                  controller: _textController,
+                  enabled: _ready && !_sending,
+                  minLines: 1,
+                  maxLines: 4,
+                  textInputAction: TextInputAction.newline,
+                  decoration: const InputDecoration(
+                    hintText: 'Сообщение',
+                    filled: true,
+                    fillColor: Colors.white,
+                    border: OutlineInputBorder(),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 8),
+              IconButton.filled(
+                tooltip: 'Отправить',
+                onPressed: !_ready || _sending ? null : _sendText,
+                icon: _sending
+                    ? const SizedBox.square(
+                        dimension: 18,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: Colors.white,
+                        ),
+                      )
+                    : const Icon(Icons.arrow_upward),
+              ),
+            ],
+          ),
+          const SizedBox(height: 4),
+          TextButton(
+            onPressed: () => globalState.openUrl(loomGuideUrl),
+            child: const Text('База знаний'),
           ),
         ],
       ),
@@ -1548,9 +2000,7 @@ class LoomAdblockCard extends ConsumerWidget {
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  enabled
-                      ? 'Рекламные домены блокируются'
-                      : 'Выключена',
+                  enabled ? 'Рекламные домены блокируются' : 'Выключена',
                   style: const TextStyle(color: loomMuted, fontSize: 10),
                 ),
               ],

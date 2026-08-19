@@ -34,6 +34,21 @@ class Preferences {
     await preferences?.setInt('version', version);
   }
 
+  Future<String?> getString(String key) async {
+    final preferences = await sharedPreferencesCompleter.future;
+    return preferences?.getString(key);
+  }
+
+  Future<bool> setString(String key, String value) async {
+    final preferences = await sharedPreferencesCompleter.future;
+    return preferences?.setString(key, value) ?? false;
+  }
+
+  Future<void> remove(String key) async {
+    final preferences = await sharedPreferencesCompleter.future;
+    await preferences?.remove(key);
+  }
+
   Future<void> saveShareState(SharedState shareState) async {
     final preferences = await sharedPreferencesCompleter.future;
     await preferences?.setString('sharedState', json.encode(shareState));

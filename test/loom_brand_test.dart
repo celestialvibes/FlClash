@@ -1,30 +1,41 @@
 import 'package:fl_clash/models/clash_config.dart';
+import 'package:fl_clash/common/loom_support.dart';
+import 'package:fl_clash/enum/enum.dart';
 import 'package:fl_clash/views/loom.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
-  test('LOOM diagnostics expose no subscription secret', () {
-    const secret = 'https://loomhost.ru/sub/very-secret-token';
-    final report = buildLoomDiagnosticReport(
-      appVersion: '1.0.0',
-      systemName: 'macOS 15.6',
-      deviceName: 'MacBook Pro',
-      network: 'wifi',
-      publicIp: '203.0.113.1',
-      countryCode: 'RU',
-      vpnState: 'connected',
-      coreState: 'connected',
-      profileUrl: secret,
-      server: 'Frankfurt',
-      protocol: 'vless',
-      adblockEnabled: true,
-      directRoutes: 2,
+  test('LOOM diagnostics only expose coarse allowlisted state', () {
+    final report = buildLoomSafeDiagnosticReport(
+      appVersion: 'secret build value',
+      platform: 'MacBook Pro secret model',
+      vpnConnected: true,
+      coreStatus: CoreStatus.connected,
+      proxyType: 'Frankfurt secret server',
+      proxySelection: LoomDiagnosticProxySelection.named,
+      subscriptionPresent: true,
+      subscriptionFreshness: LoomDiagnosticFreshness.fresh,
+      subscriptionExpiry: LoomDiagnosticExpiry.later,
+      subscriptionQuota: LoomDiagnosticQuota.available,
+      connectivity: LoomDiagnosticConnectivity.wifi,
     );
 
-    expect(report, contains('Support ID:'));
-    expect(report, contains('Network: wifi'));
-    expect(report, isNot(contains(secret)));
-    expect(report, isNot(contains('very-secret-token')));
+    expect(report, contains('App version: unknown'));
+    expect(report, contains('Platform: other'));
+    expect(report, contains('Proxy type: other'));
+    expect(report, contains('Connectivity: wifi'));
+    for (final forbidden in [
+      'secret build value',
+      'MacBook Pro secret model',
+      'Frankfurt secret server',
+      '203.0.113.1',
+      'very-secret-token',
+      'https://loomhost.ru/sub/',
+      'Public IP',
+      'Support ID',
+    ]) {
+      expect(report, isNot(contains(forbidden)), reason: forbidden);
+    }
   });
 
   test('LOOM adblock is one GEOSITE reject rule', () {
@@ -58,6 +69,10 @@ void main() {
       'IP-CIDR6,2001:db8::1/128,DIRECT,no-resolve',
     );
     expect(isLoomDirectRule(createLoomDirectRule('example.com')!), isTrue);
+    final supportRule = createLoomSupportDirectRule();
+    expect(supportRule.rawValue, 'DOMAIN-SUFFIX,$loomSupportApiHost,DIRECT');
+    expect(isLoomSupportDirectRule(supportRule), isTrue);
+    expect(isLoomDirectRule(supportRule), isFalse);
   });
 
   test('LOOM direct rules reject malformed and injectable inputs', () {

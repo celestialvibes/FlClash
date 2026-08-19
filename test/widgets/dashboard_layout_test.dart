@@ -41,6 +41,7 @@ void main() {
     expect(find.text('ДОБРО ПОЖАЛОВАТЬ\nВ LOOM.'), findsOneWidget);
     expect(find.text('ПОЛУЧИТЬ ПОДПИСКУ'), findsOneWidget);
     expect(find.text('ЕСТЬ ПОДПИСКА?'), findsOneWidget);
+    expect(find.text('Нужна помощь?'), findsOneWidget);
 
     await tester.tap(find.text('ЕСТЬ ПОДПИСКА?'));
     await tester.pumpAndSettle();

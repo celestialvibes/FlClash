@@ -354,7 +354,7 @@ void main() {
       await action.setRunning(false);
     });
 
-    test('normalizes LOOM starts to rule mode', () async {
+    test('keeps LOOM runtime in rule mode', () {
       final container = ProviderContainer(
         overrides: [
           initProvider.overrideWithBuild((_, _) => true),
@@ -369,10 +369,8 @@ void main() {
 
       final action =
           container.read(setupActionProvider.notifier) as _RaceSetupAction;
-      await action.setRunning(true);
-
+      action.changeMode(Mode.global);
       expect(container.read(patchClashConfigProvider).mode, Mode.rule);
-      await action.setRunning(false);
     });
 
     group('rapid status changes', () {
