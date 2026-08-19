@@ -1,6 +1,7 @@
 import 'package:fl_clash/common/common.dart';
 import 'package:fl_clash/common/theme.dart';
 import 'package:fl_clash/l10n/l10n.dart';
+import 'package:fl_clash/pages/home.dart';
 import 'package:fl_clash/providers/providers.dart';
 import 'package:fl_clash/state.dart';
 import 'package:fl_clash/views/loom.dart';
@@ -10,6 +11,20 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
+  testWidgets('root hides navigation until a subscription exists', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [viewSizeProvider.overrideWithValue(const Size(800, 600))],
+        child: const _TestApp(child: LoomRootView()),
+      ),
+    );
+
+    expect(find.byType(LoomHelloView), findsOneWidget);
+    expect(find.byType(NavigationBar), findsNothing);
+  });
+
   testWidgets('hello screen leads with subscription actions', (tester) async {
     await tester.pumpWidget(
       ProviderScope(

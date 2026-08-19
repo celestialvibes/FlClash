@@ -4,11 +4,24 @@ import 'package:fl_clash/manager/app_manager.dart';
 import 'package:fl_clash/models/common.dart';
 import 'package:fl_clash/providers/providers.dart';
 import 'package:fl_clash/state.dart';
+import 'package:fl_clash/views/loom.dart';
 import 'package:fl_clash/widgets/widgets.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 typedef OnSelected = void Function(int index);
+
+class LoomRootView extends ConsumerWidget {
+  const LoomRootView({super.key});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final hasProfiles = ref.watch(
+      profilesProvider.select((profiles) => profiles.isNotEmpty),
+    );
+    return hasProfiles ? const HomePage() : const LoomHelloView();
+  }
+}
 
 class HomePage extends ConsumerWidget {
   const HomePage({super.key});

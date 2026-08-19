@@ -819,6 +819,18 @@ class LoomSettingsView extends ConsumerWidget {
                     BaseNavigator.push(context, const LoomSupportView());
                   },
                 ),
+                const Divider(height: 1),
+                LoomSettingsRow(
+                  label: 'Версия',
+                  value: globalState.packageInfo.version,
+                ),
+                const Divider(height: 1),
+                LoomSettingsRow(
+                  label: 'Исходный код и лицензия',
+                  onTap: () => globalState.openUrl(
+                    'https://github.com/$repository',
+                  ),
+                ),
               ],
             ),
           ),
@@ -1403,7 +1415,7 @@ class LoomAdblockCard extends ConsumerWidget {
                 Text(
                   enabled
                       ? 'Рекламные домены блокируются'
-                      : 'Используется база доменов Mihomo',
+                      : 'Выключена',
                   style: const TextStyle(color: loomMuted, fontSize: 10),
                 ),
               ],
