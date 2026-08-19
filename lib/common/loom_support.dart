@@ -87,6 +87,8 @@ class LoomSupportMessage {
   final String? actionState;
   final String? actionChoiceId;
   final DateTime? actionExpiresAt;
+  final String? eventKind;
+  final Map<String, dynamic> eventPayload;
   final DateTime createdAt;
 
   const LoomSupportMessage({
@@ -99,6 +101,8 @@ class LoomSupportMessage {
     required this.actionState,
     required this.actionChoiceId,
     required this.actionExpiresAt,
+    required this.eventKind,
+    required this.eventPayload,
     required this.createdAt,
   });
 
@@ -125,6 +129,8 @@ class LoomSupportMessage {
       actionExpiresAt: DateTime.tryParse(
         json['action_expires_at'] as String? ?? '',
       ),
+      eventKind: json['event_kind'] as String?,
+      eventPayload: _mapOrEmpty(json['event_payload']),
       createdAt: createdAt,
     );
   }
@@ -158,6 +164,9 @@ class LoomSupportMessage {
           choices.length >= 2 &&
           choices.length <= 5,
     'request_diagnostics_v1' ||
+    'request_diagnostics_v2' ||
+    'detect_network_conflicts_v1' ||
+    'replace_subscription_v1' ||
     'refresh_subscription_v1' => actionPayload.isEmpty,
     'open_screen_v1' =>
       actionPayload.length == 1 &&
@@ -171,6 +180,65 @@ class LoomSupportMessage {
           }.contains(actionPayload['screen']),
     _ => false,
   };
+
+  bool get isSupportedEvent => switch (eventKind) {
+    'plan_changed_v1' =>
+      eventPayload.length == 1 && eventPayload['plan_name'] is String,
+    'days_added_v1' =>
+      eventPayload.length == 1 && eventPayload['expires_on'] is String,
+    'traffic_added_v1' =>
+      eventPayload.length == 1 && eventPayload['gigabytes'] is num,
+    'device_limit_changed_v1' =>
+      eventPayload.length == 1 && eventPayload['limit'] is num,
+    'subscription_reissued_v1' ||
+    'incident_resolved_v1' ||
+    'thread_closed_v1' => eventPayload.isEmpty,
+    _ => false,
+  };
+}
+
+class LoomSupportNetworkContext {
+  final String? publicIp;
+  final String? countryCode;
+  final String? asn;
+  final String? operatorName;
+
+  const LoomSupportNetworkContext({
+    this.publicIp,
+    this.countryCode,
+    this.asn,
+    this.operatorName,
+  });
+
+  factory LoomSupportNetworkContext.fromJson(Map<String, dynamic> json) {
+    String? value(String key, int maxLength) {
+      final text = json[key];
+      if (text == null) return null;
+      if (text is! String ||
+          text.isEmpty ||
+          text.length > maxLength ||
+          text.contains(RegExp(r'[\x00-\x1F\x7F]'))) {
+        throw const FormatException('invalid support network context');
+      }
+      return text;
+    }
+
+    final publicIp = value('public_ip', 45);
+    final countryCode = value('country_code', 2);
+    final asn = value('asn', 32);
+    final operatorName = value('operator', 120);
+    if (publicIp != null && InternetAddress.tryParse(publicIp) == null ||
+        countryCode != null && !RegExp(r'^[A-Z]{2}$').hasMatch(countryCode) ||
+        asn != null && !RegExp(r'^(?:AS)?[0-9]+$').hasMatch(asn)) {
+      throw const FormatException('invalid support network context');
+    }
+    return LoomSupportNetworkContext(
+      publicIp: publicIp,
+      countryCode: countryCode,
+      asn: asn,
+      operatorName: operatorName,
+    );
+  }
 }
 
 int parseLoomSupportLastSeenMessageId(String? stored, String supportId) {
@@ -325,6 +393,15 @@ class LoomSupportClient {
       openThreadOnReauth: true,
     );
     return LoomSupportMessage.fromJson(_map(response.data));
+  }
+
+  Future<LoomSupportNetworkContext> getNetworkContext() async {
+    final response = await _withBearer(
+      (token) =>
+          _dio.get<Object?>(_url('network-context'), options: _options(token)),
+      openThreadOnReauth: true,
+    );
+    return LoomSupportNetworkContext.fromJson(_map(response.data));
   }
 
   String _url(String suffix) =>

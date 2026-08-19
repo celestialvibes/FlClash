@@ -188,6 +188,9 @@ func handleMethodCall(call *MethodCall, response MethodResponse) {
 		}
 		response.success(config)
 		return
+	case getVersionMethod:
+		response.success(handleGetVersion())
+		return
 	case closeConnectionMethod:
 		id := ""
 		if !decodeMethodArguments(call, response, &id) {

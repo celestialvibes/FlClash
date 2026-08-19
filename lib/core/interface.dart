@@ -25,6 +25,8 @@ mixin CoreInterface {
 
   Future<Map<String, dynamic>> getConfig(String path);
 
+  Future<VersionInfo> getVersion();
+
   Future<Delay> asyncTestDelay(String url, String proxyName);
 
   Future<String> updateConfig(UpdateParams updateParams);
@@ -162,6 +164,14 @@ abstract class CoreHandlerInterface with CoreInterface {
       );
     }
     return result;
+  }
+
+  @override
+  Future<VersionInfo> getVersion() async {
+    final result = await _invokeMethod<Map<String, dynamic>>(
+      method: CoreMethod.getVersion,
+    );
+    return VersionInfo.fromJson(result ?? const {});
   }
 
   @override

@@ -787,6 +787,9 @@ class _RaceSetupAction extends SetupAction {
   Completer<bool>? stopCompleter;
 
   @override
+  bool get requireTunOnStart => false;
+
+  @override
   void applyProfileDebounce({bool silence = false, bool force = false}) {
     applyProfileDebounceCount++;
   }

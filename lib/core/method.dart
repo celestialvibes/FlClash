@@ -11,6 +11,7 @@ enum CoreMethod {
   validateConfig,
   updateConfig,
   getConfig,
+  getVersion,
   getProxies,
   changeProxy,
   getTraffic,

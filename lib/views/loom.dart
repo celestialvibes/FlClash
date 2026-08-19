@@ -1,11 +1,14 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:ffi' show Abi;
 import 'dart:io';
 
 import 'package:collection/collection.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:fl_clash/common/common.dart';
+import 'package:fl_clash/common/loom_diagnostics.dart';
 import 'package:fl_clash/common/loom_support.dart';
+import 'package:fl_clash/core/controller.dart';
 import 'package:fl_clash/database/database.dart';
 import 'package:fl_clash/enum/enum.dart';
 import 'package:fl_clash/models/models.dart';
@@ -1097,8 +1100,24 @@ class LoomSupportView extends ConsumerStatefulWidget {
   ConsumerState<LoomSupportView> createState() => _LoomSupportViewState();
 }
 
+class _LoomPreparedSubscription {
+  final Profile candidate;
+  final int servers;
+
+  const _LoomPreparedSubscription(this.candidate, this.servers);
+}
+
 class _LoomSupportViewState extends ConsumerState<LoomSupportView>
     with WidgetsBindingObserver, ActivePollingMixin<LoomSupportView> {
+  static const _quickMessages = [
+    'Не подключается',
+    'Нет интернета',
+    'Отключается',
+    'Медленная скорость',
+    'Не открывается сайт',
+    'Проблема с подпиской',
+  ];
+
   late final LoomSupportClient _client;
   final _textController = TextEditingController();
   final _scrollController = ScrollController();
@@ -1155,6 +1174,9 @@ class _LoomSupportViewState extends ConsumerState<LoomSupportView>
         messages = await _client.listMessages(afterId: 0);
       }
       if (!isCurrent()) return;
+      if (messages.any((message) => message.eventKind == 'thread_closed_v1')) {
+        await _client.ensureOpenThread();
+      }
       setState(() {
         if (identityChanged) {
           _messages.clear();
@@ -1225,7 +1247,7 @@ class _LoomSupportViewState extends ConsumerState<LoomSupportView>
     }
   }
 
-  Future<String> _diagnosticReport() async {
+  Future<String> _safeDiagnosticReport() async {
     final profile = ref.read(currentProfileProvider);
     final groups = ref.read(currentGroupsStateProvider).value;
     final group =
@@ -1254,6 +1276,210 @@ class _LoomSupportViewState extends ConsumerState<LoomSupportView>
     );
   }
 
+  Future<String> _diagnosticReportV2({
+    LoomSupportNetworkContext? network,
+  }) async {
+    final profile = ref.read(currentProfileProvider);
+    final groups = ref.read(currentGroupsStateProvider).value;
+    final group =
+        groups.firstWhereOrNull((item) => item.name == 'LOOM') ??
+        groups.firstWhereOrNull((item) => item.type == GroupType.Selector) ??
+        groups.firstOrNull;
+    final selectedName = group == null
+        ? null
+        : ref.read(selectedProxyNameProvider(group.name));
+    final proxy =
+        group?.all.firstWhereOrNull((item) => item.name == selectedName) ??
+        group?.all.firstOrNull;
+    final rules = profile == null
+        ? const <Rule>[]
+        : await database.rulesDao.queryProfileAddedRules(profile.id).get();
+    VersionInfo coreVersion;
+    try {
+      coreVersion = await coreController.getVersion();
+    } catch (_) {
+      coreVersion = const VersionInfo();
+    }
+    final connectivity = await Connectivity().checkConnectivity();
+    final lastNetworkFailure = ref
+        .read(logsProvider)
+        .list
+        .lastWhereOrNull(
+          (log) =>
+              log.logLevel == LogLevel.error &&
+              RegExp(
+                r'network|connect|timeout|dns|socket|dial',
+                caseSensitive: false,
+              ).hasMatch(log.payload),
+        );
+    final subscription = profile?.subscriptionInfo;
+    return buildLoomDiagnosticReportV2(
+      appVersion: globalState.packageInfo.version,
+      appBuild: globalState.packageInfo.buildNumber,
+      platform: Platform.operatingSystem,
+      osVersion: Platform.operatingSystemVersion,
+      architecture: Abi.current().toString(),
+      coreName: coreVersion.clashName,
+      coreVersion: coreVersion.version,
+      vpnConnected: ref.read(isStartProvider),
+      coreStatus: ref.read(coreStatusProvider).name,
+      mode: ref.read(patchClashConfigProvider).mode.name,
+      tunEnabled: ref.read(patchClashConfigProvider).tun.enable,
+      systemProxyEnabled: ref.read(networkSettingProvider).systemProxy,
+      serverName: proxy?.name,
+      proxyType: proxy?.type,
+      pingMs: proxy == null
+          ? null
+          : ref.read(
+              delayProvider(proxyName: proxy.name, testUrl: group?.testUrl),
+            ),
+      uptimeMs: ref.read(runTimeProvider),
+      subscriptionUpdatedAt: profile?.lastUpdateDate,
+      subscriptionExpiresAt: subscription == null || subscription.expire <= 0
+          ? null
+          : DateTime.fromMillisecondsSinceEpoch(subscription.expire * 1000),
+      subscriptionUsedBytes: subscription == null
+          ? null
+          : subscription.upload + subscription.download,
+      subscriptionTotalBytes: subscription?.total,
+      adblockEnabled: rules.any(isLoomAdblockRule),
+      directRules: rules.where(isLoomDirectRule).length,
+      lastNetworkFailureAt: lastNetworkFailure?.dateTime,
+      connectivity: _loomConnectivity(connectivity).name,
+      network: network,
+    );
+  }
+
+  Future<_LoomPreparedSubscription?> _prepareSubscriptionReplacement(
+    Profile current,
+  ) async {
+    var value = '';
+    while (mounted) {
+      final url = await globalState.showCommonDialog<String>(
+        child: InputDialog(
+          autovalidateMode: AutovalidateMode.onUnfocus,
+          title: 'Заменить подписку',
+          labelText: 'Ссылка подписки',
+          value: value,
+          inputFormatters: TextInputLimits.limit(TextInputLimits.url),
+          validator: (value) {
+            final uri = Uri.tryParse(value?.trim() ?? '');
+            if (uri == null ||
+                !const {'http', 'https'}.contains(uri.scheme) ||
+                uri.host.isEmpty) {
+              return 'Введите ссылку http или https';
+            }
+            return null;
+          },
+        ),
+      );
+      if (url == null) return null;
+      value = url.trim();
+      final candidate = await globalState.loadingRun(
+        tag: LoadingTag.profiles,
+        () => Profile.normal(url: value).update(),
+        title: 'Проверяем подписку',
+        showError: false,
+      );
+      if (candidate == null) {
+        final retry = await globalState.showMessage(
+          title: 'Подписка не прошла проверку',
+          message: const TextSpan(
+            text: 'Старая подписка не изменена. Проверьте ссылку и интернет.',
+          ),
+          confirmText: 'ПОПРОБОВАТЬ СНОВА',
+        );
+        if (retry != true) return null;
+        continue;
+      }
+      try {
+        final config = await coreController.getConfig(candidate.id);
+        final servers = config['proxies'] is List
+            ? (config['proxies'] as List).length
+            : 0;
+        final expire = candidate.subscriptionInfo?.expire ?? 0;
+        final expiry = expire <= 0
+            ? 'не указано'
+            : DateFormat(
+                'dd.MM.yyyy',
+              ).format(DateTime.fromMillisecondsSinceEpoch(expire * 1000));
+        final confirmed = await globalState.showMessage(
+          title: 'Подписка готова',
+          message: TextSpan(
+            text:
+                'Серверов: $servers\nДействует до: $expiry\n\nТекущая подписка будет заменена только после подтверждения.',
+          ),
+          confirmText: 'ЗАМЕНИТЬ',
+        );
+        if (confirmed == true) {
+          return _LoomPreparedSubscription(candidate, servers);
+        }
+      } catch (_) {
+        globalState.showNotifier('Не удалось прочитать новую подписку');
+      }
+      if (candidate.id != current.id) {
+        await File(
+          await appPath.getProfilePath(candidate.id.toString()),
+        ).safeDelete();
+      }
+      return null;
+    }
+    return null;
+  }
+
+  Future<void> _commitSubscriptionReplacement(
+    Profile current,
+    _LoomPreparedSubscription prepared,
+  ) async {
+    final targetPath = await appPath.getProfilePath(current.id.toString());
+    final candidatePath = await appPath.getProfilePath(
+      prepared.candidate.id.toString(),
+    );
+    final staged = File('$targetPath.loom-replacement');
+    final backup = File('$targetPath.loom-backup');
+    final target = File(targetPath);
+    final replacement = current.copyWith(
+      url: prepared.candidate.url,
+      lastUpdateDate: prepared.candidate.lastUpdateDate,
+      subscriptionInfo: prepared.candidate.subscriptionInfo,
+    );
+    await File(candidatePath).copy(staged.path);
+    if (await target.exists()) await target.copy(backup.path);
+    try {
+      await staged.rename(targetPath);
+      await database.profilesDao.putAll([replacement.toCompanion()]);
+      ref.read(profilesProvider.notifier).put(replacement);
+      ref.invalidate(setupStateProvider(current.id));
+      await ref
+          .read(setupActionProvider.notifier)
+          .applyProfile(force: true, silence: true);
+    } catch (_) {
+      if (await backup.exists()) await backup.copy(targetPath);
+      await database.profilesDao.putAll([current.toCompanion()]);
+      ref.read(profilesProvider.notifier).put(current);
+      ref.invalidate(setupStateProvider(current.id));
+      try {
+        await ref
+            .read(setupActionProvider.notifier)
+            .applyProfile(force: true, silence: true);
+      } catch (_) {}
+      rethrow;
+    } finally {
+      await staged.safeDelete();
+      await backup.safeDelete();
+      await File(candidatePath).safeDelete();
+    }
+  }
+
+  Future<void> _replaceSubscription(Profile profile) async {
+    final prepared = await _prepareSubscriptionReplacement(profile);
+    if (prepared == null) return;
+    await _commitSubscriptionReplacement(profile, prepared);
+    globalState.showNotifier(
+      'Подписка заменена · серверов: ${prepared.servers}',
+    );
+  }
+
   Future<void> _respond(
     LoomSupportMessage message, {
     required bool accept,
@@ -1268,6 +1494,7 @@ class _LoomSupportViewState extends ConsumerState<LoomSupportView>
     final profile = ref.read(currentProfileProvider);
     if (accept &&
         (message.actionKind == 'refresh_subscription_v1' ||
+            message.actionKind == 'replace_subscription_v1' ||
             message.actionPayload['screen'] == 'split_tunneling') &&
         profile == null) {
       globalState.showNotifier('Сначала добавьте подписку');
@@ -1275,8 +1502,9 @@ class _LoomSupportViewState extends ConsumerState<LoomSupportView>
     }
 
     String? report;
+    _LoomPreparedSubscription? preparedSubscription;
     if (accept && message.actionKind == 'request_diagnostics_v1') {
-      report = await _diagnosticReport();
+      report = await _safeDiagnosticReport();
       if (!mounted) return;
       final confirmed = await globalState.showMessage(
         title: 'Отправить диагностику?',
@@ -1287,6 +1515,56 @@ class _LoomSupportViewState extends ConsumerState<LoomSupportView>
         confirmText: 'ОТПРАВИТЬ',
       );
       if (confirmed != true) return;
+    }
+    if (accept && message.actionKind == 'request_diagnostics_v2') {
+      report = await _diagnosticReportV2();
+      if (!mounted) return;
+      final confirmed = await globalState.showMessage(
+        title: 'Отправить полную диагностику?',
+        message: TextSpan(
+          text:
+              'Оператор увидит версии клиента и Core, macOS и архитектуру, режим подключения, выбранный сервер, протокол, ping, uptime, даты и лимиты подписки, adblock, число DIRECT-правил и время последней сетевой ошибки. Ссылка подписки и логи не отправляются.\n\n$report',
+        ),
+        confirmText: 'ОТПРАВИТЬ',
+      );
+      if (confirmed != true) return;
+      final includeNetwork = await globalState.showMessage(
+        title: 'Добавить данные сети?',
+        message: const TextSpan(
+          text:
+              'Отдельно можно передать публичный IP, страну, ASN и название оператора. Данные запрашиваются только сейчас через HTTPS-сервер LOOM.',
+        ),
+        confirmText: 'ДОБАВИТЬ',
+        cancelText: 'БЕЗ НИХ',
+      );
+      if (includeNetwork == true) {
+        try {
+          report = await _diagnosticReportV2(
+            network: await _client.getNetworkContext(),
+          );
+        } catch (_) {
+          globalState.showNotifier('Данные сети недоступны — отправим без них');
+        }
+      }
+    }
+    if (accept && message.actionKind == 'detect_network_conflicts_v1') {
+      report = await detectLoomNetworkConflicts(
+        loomConnected: ref.read(isStartProvider),
+      );
+      if (!mounted) return;
+      final confirmed = await globalState.showMessage(
+        title: 'Отправить найденные настройки?',
+        message: TextSpan(
+          text:
+              'Оператор увидит активные VPN-сервисы, utun-интерфейсы, default route, включённые системные прокси и DNS. Ничего на Mac не изменяется.\n\n$report',
+        ),
+        confirmText: 'ОТПРАВИТЬ',
+      );
+      if (confirmed != true) return;
+    }
+    if (accept && message.actionKind == 'replace_subscription_v1') {
+      preparedSubscription = await _prepareSubscriptionReplacement(profile!);
+      if (preparedSubscription == null) return;
     }
 
     setState(() {
@@ -1304,13 +1582,21 @@ class _LoomSupportViewState extends ConsumerState<LoomSupportView>
       if (!accept) return;
       switch (message.actionKind) {
         case 'request_diagnostics_v1':
+        case 'request_diagnostics_v2':
           await _sendText('Диагностика с согласия пользователя:\n$report');
+          break;
+        case 'detect_network_conflicts_v1':
+          await _sendText('Проверка сетевых конфликтов:\n$report');
           break;
         case 'refresh_subscription_v1':
           await ref
               .read(profilesActionProvider.notifier)
               .updateProfile(profile!, showLoading: true);
           globalState.showNotifier('Подписка обновлена');
+          break;
+        case 'replace_subscription_v1':
+          await _commitSubscriptionReplacement(profile!, preparedSubscription!);
+          globalState.showNotifier('Подписка заменена');
           break;
         case 'open_screen_v1':
           await _openScreen(message.actionPayload['screen'] as String);
@@ -1321,6 +1607,13 @@ class _LoomSupportViewState extends ConsumerState<LoomSupportView>
         setState(() => _error = 'Действие не выполнено. Попробуйте ещё раз');
       }
     } finally {
+      if (preparedSubscription != null) {
+        await File(
+          await appPath.getProfilePath(
+            preparedSubscription.candidate.id.toString(),
+          ),
+        ).safeDelete();
+      }
       if (mounted) setState(() => _busyActionId = null);
     }
   }
@@ -1366,13 +1659,127 @@ class _LoomSupportViewState extends ConsumerState<LoomSupportView>
         'choice_v1' =>
           message.actionPayload['prompt'] as String? ?? 'Выберите вариант',
         'request_diagnostics_v1' => 'Отправить диагностику',
+        'request_diagnostics_v2' => 'Отправить полную диагностику',
+        'detect_network_conflicts_v1' => 'Проверить сетевые конфликты',
+        'replace_subscription_v1' => 'Заменить подписку',
         'refresh_subscription_v1' => 'Обновить подписку',
         'open_screen_v1' => 'Открыть экран в приложении',
         _ => 'Неподдерживаемое действие',
       };
 
+  String _eventTitle(LoomSupportMessage message) => switch (message.eventKind) {
+    'plan_changed_v1' => '✓ Тариф изменён',
+    'days_added_v1' => '✓ Подписка продлена',
+    'traffic_added_v1' => '✓ Добавлен трафик',
+    'device_limit_changed_v1' => '✓ Лимит устройств изменён',
+    'subscription_reissued_v1' => '✓ Подписка перевыпущена',
+    'incident_resolved_v1' => '✓ Проблема устранена',
+    'thread_closed_v1' => '✓ Обращение закрыто',
+    _ => 'Обновление сервиса',
+  };
+
+  String _eventDetail(LoomSupportMessage message) {
+    final payload = message.eventPayload;
+    return switch (message.eventKind) {
+      'plan_changed_v1' => 'Новый тариф: ${payload['plan_name']}',
+      'days_added_v1' =>
+        'Срок действия подписки продлён до: ${_eventDate(payload['expires_on'] as String?)}',
+      'traffic_added_v1' => 'К подписке добавлено ${payload['gigabytes']} ГБ.',
+      'device_limit_changed_v1' =>
+        'Теперь можно подключить устройств: ${payload['limit']}.',
+      'subscription_reissued_v1' =>
+        'Старая ссылка может больше не работать. Введите новую ссылку локально.',
+      'incident_resolved_v1' =>
+        'Инцидент устранён. Можно повторить подключение.',
+      'thread_closed_v1' => 'Если проблема вернётся, напишите новое сообщение.',
+      _ => 'Обновите экран поддержки.',
+    };
+  }
+
+  String _eventDate(String? value) {
+    final date = DateTime.tryParse(value ?? '');
+    return date == null
+        ? value ?? 'не указан'
+        : DateFormat('dd.MM.yyyy').format(date);
+  }
+
+  Future<void> _handleEvent(LoomSupportMessage message) async {
+    if (_busyActionId != null) return;
+    final profile = ref.read(currentProfileProvider);
+    if (profile == null) {
+      globalState.showNotifier('Сначала добавьте подписку');
+      return;
+    }
+    setState(() => _busyActionId = message.id);
+    try {
+      if (message.eventKind == 'subscription_reissued_v1') {
+        await _replaceSubscription(profile);
+      } else {
+        await ref
+            .read(profilesActionProvider.notifier)
+            .updateProfile(profile, showLoading: true);
+        globalState.showNotifier('Подписка обновлена');
+      }
+    } catch (_) {
+      if (mounted) setState(() => _error = 'Не удалось обновить подписку');
+    } finally {
+      if (mounted) setState(() => _busyActionId = null);
+    }
+  }
+
+  Widget _event(LoomSupportMessage message) {
+    final canRefresh = const {
+      'plan_changed_v1',
+      'days_added_v1',
+      'traffic_added_v1',
+      'device_limit_changed_v1',
+      'subscription_reissued_v1',
+    }.contains(message.eventKind);
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 10),
+      child: LoomCard(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Text(
+              _eventTitle(message),
+              style: const TextStyle(
+                color: loomInk,
+                fontSize: 15,
+                fontWeight: FontWeight.w800,
+              ),
+            ),
+            const SizedBox(height: 6),
+            Text(
+              _eventDetail(message),
+              style: const TextStyle(
+                color: loomMuted,
+                fontSize: 12,
+                height: 1.4,
+              ),
+            ),
+            if (canRefresh) ...[
+              const SizedBox(height: 12),
+              FilledButton(
+                onPressed: _busyActionId == null
+                    ? () => _handleEvent(message)
+                    : null,
+                child: Text(
+                  message.eventKind == 'subscription_reissued_v1'
+                      ? 'ЗАМЕНИТЬ ПОДПИСКУ'
+                      : 'ОБНОВИТЬ ПОДПИСКУ',
+                ),
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+
   Widget _message(LoomSupportMessage message) {
     if (message.kind == 'action') return _action(message);
+    if (message.kind == 'event') return _event(message);
     final mine = message.senderKind == 'client';
     return Align(
       alignment: mine ? Alignment.centerRight : Alignment.centerLeft,
@@ -1420,6 +1827,27 @@ class _LoomSupportViewState extends ConsumerState<LoomSupportView>
               const SizedBox(height: 6),
               const Text(
                 'Только общие статусы. Без IP, данных устройства, имени сервера, логов и ссылки подписки.',
+                style: TextStyle(color: loomMuted, fontSize: 10, height: 1.35),
+              ),
+            ],
+            if (message.actionKind == 'request_diagnostics_v2') ...[
+              const SizedBox(height: 6),
+              const Text(
+                'Версии, режим подключения, выбранный сервер, ping и точные данные подписки. IP и оператор — только с отдельного согласия.',
+                style: TextStyle(color: loomMuted, fontSize: 10, height: 1.35),
+              ),
+            ],
+            if (message.actionKind == 'detect_network_conflicts_v1') ...[
+              const SizedBox(height: 6),
+              const Text(
+                'Только читает VPN-сервисы, маршруты, системные прокси и DNS. Ничего не меняет.',
+                style: TextStyle(color: loomMuted, fontSize: 10, height: 1.35),
+              ),
+            ],
+            if (message.actionKind == 'replace_subscription_v1') ...[
+              const SizedBox(height: 6),
+              const Text(
+                'Новая ссылка вводится и проверяется только на этом устройстве. Оператор её не увидит.',
                 style: TextStyle(color: loomMuted, fontSize: 10, height: 1.35),
               ),
             ],
@@ -1525,6 +1953,24 @@ class _LoomSupportViewState extends ConsumerState<LoomSupportView>
                   ),
           ),
           const SizedBox(height: 10),
+          SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: Row(
+              children: [
+                for (final text in _quickMessages)
+                  Padding(
+                    padding: const EdgeInsets.only(right: 6),
+                    child: ActionChip(
+                      label: Text(text),
+                      onPressed: !_ready || _sending
+                          ? null
+                          : () => _sendText(text),
+                    ),
+                  ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 8),
           Row(
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [

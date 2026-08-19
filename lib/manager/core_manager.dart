@@ -46,16 +46,7 @@ class _CoreContainerState extends ConsumerState<CoreManager>
         ref.read(setupActionProvider.notifier).updateConfigDebounce();
       }
     });
-    ref.listenManual(appSettingProvider.select((state) => state.openLogs), (
-      prev,
-      next,
-    ) {
-      if (next) {
-        widget.controller.startLog();
-      } else {
-        widget.controller.stopLog();
-      }
-    }, fireImmediately: true);
+    widget.controller.startLog();
   }
 
   @override
@@ -115,7 +106,8 @@ class _CoreContainerState extends ConsumerState<CoreManager>
         logLevel: LogLevel.error,
       );
     }
-    if (WidgetsBinding.instance.lifecycleState == AppLifecycleState.resumed) {
+    if (mounted &&
+        WidgetsBinding.instance.lifecycleState == AppLifecycleState.resumed) {
       context.showNotifier(message);
     }
     super.onCrash(message);

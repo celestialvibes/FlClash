@@ -199,6 +199,8 @@ class CoreController {
     return data;
   }
 
+  Future<VersionInfo> getVersion() => _interface.getVersion();
+
   Future<Traffic> getTraffic(bool onlyStatisticsProxy) async {
     return _interface.getTraffic(onlyStatisticsProxy);
   }

@@ -77,6 +77,7 @@ class _RecordingCoreHandler extends CoreHandlerInterface {
         'mode': 'rule',
         'rule': ['MATCH,DIRECT'],
       },
+      CoreMethod.getVersion => {'clashName': 'mihomo', 'version': '1.19.0'},
       CoreMethod.getMemory => 2048,
       _ => '',
     };
@@ -219,6 +220,10 @@ void main() {
       'mode': 'rule',
       'rule': ['MATCH,DIRECT'],
     });
+    expect(
+      await handler.getVersion(),
+      const VersionInfo(clashName: 'mihomo', version: '1.19.0'),
+    );
     expect(await handler.getMemory(), 2048);
   });
 

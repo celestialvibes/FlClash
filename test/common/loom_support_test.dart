@@ -39,6 +39,13 @@ void main() {
       action('request_diagnostics_v1', const {}).isSupportedAction,
       isTrue,
     );
+    for (final kind in [
+      'request_diagnostics_v2',
+      'detect_network_conflicts_v1',
+      'replace_subscription_v1',
+    ]) {
+      expect(action(kind, const {}).isSupportedAction, isTrue, reason: kind);
+    }
     expect(
       action('request_diagnostics_v1', {
         'url': 'https://example.invalid',
@@ -54,6 +61,32 @@ void main() {
       isFalse,
     );
     expect(action('shell_v1', {'command': 'id'}).isSupportedAction, isFalse);
+  });
+
+  test('service events and network context are strictly parsed', () {
+    final event = LoomSupportMessage.fromJson({
+      'id': 2,
+      'sender_kind': 'admin',
+      'kind': 'event',
+      'text': '',
+      'event_kind': 'days_added_v1',
+      'event_payload': {'expires_on': '2026-08-31'},
+      'created_at': '2026-08-19T00:00:00Z',
+    });
+    expect(event.isSupportedEvent, isTrue);
+    expect(
+      LoomSupportNetworkContext.fromJson({
+        'public_ip': '203.0.113.1',
+        'country_code': 'RU',
+        'asn': 'AS12345',
+        'operator': 'Example ISP',
+      }).operatorName,
+      'Example ISP',
+    );
+    expect(
+      () => LoomSupportNetworkContext.fromJson({'public_ip': 'not-an-ip'}),
+      throwsFormatException,
+    );
   });
 
   test('support read cursor is scoped to its installation', () {

@@ -63,6 +63,15 @@ type Traffic struct {
 	Down int64 `json:"down"`
 }
 
+type VersionInfo struct {
+	ClashName string `json:"clashName"`
+	Version   string `json:"version"`
+}
+
+func handleGetVersion() VersionInfo {
+	return VersionInfo{ClashName: constant.MihomoName, Version: constant.Version}
+}
+
 type ExternalProvider struct {
 	Name             string                     `json:"name"`
 	Type             string                     `json:"type"`
@@ -111,6 +120,7 @@ const (
 	crashMethod                    CoreMethod = "crash"
 	setupConfigMethod              CoreMethod = "setupConfig"
 	getConfigMethod                CoreMethod = "getConfig"
+	getVersionMethod               CoreMethod = "getVersion"
 	clearEffectMethod              CoreMethod = "clearEffect"
 )
 

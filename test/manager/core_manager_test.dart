@@ -17,7 +17,7 @@ void main() {
     tester,
   ) async {
     final coreInterface = _MockCoreHandlerInterface();
-    when(() => coreInterface.stopLog()).thenAnswer((_) {});
+    when(() => coreInterface.startLog()).thenAnswer((_) {});
     final controller = CoreController.test(coreInterface);
     late _CrashSetupAction setupAction;
     final container = ProviderContainer(
