@@ -110,6 +110,12 @@ void main() {
     expect(actions.type, ProxiesType.tab);
   });
 
+  test('LOOM never runs legacy background IP detection', () {
+    expect(container.read(checkIpProvider).c, isFalse);
+    container.read(checkIpNumProvider.notifier).add();
+    expect(container.read(checkIpProvider).c, isFalse);
+  });
+
   test(
     'proxy list and tab providers filter groups and preserve selections',
     () {

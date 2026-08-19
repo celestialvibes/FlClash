@@ -465,13 +465,7 @@ String proxyDesc(Ref ref, Proxy proxy) {
 VM3<bool, int, bool> checkIp(Ref ref) {
   final isInit = ref.watch(initProvider);
   final checkIpNum = ref.watch(checkIpNumProvider);
-  final containsDetection = ref.watch(
-    dashboardStateProvider.select(
-      (state) =>
-          state.dashboardWidgets.contains(DashboardWidget.networkDetection),
-    ),
-  );
-  return VM3(isInit, checkIpNum, containsDetection);
+  return VM3(isInit, checkIpNum, false);
 }
 
 @riverpod
