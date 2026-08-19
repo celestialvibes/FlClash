@@ -295,6 +295,27 @@ void main() {
   });
 
   group('SetupAction', () {
+    test('normalizes LOOM starts to rule mode', () async {
+      final container = ProviderContainer(
+        overrides: [
+          initProvider.overrideWithBuild((_, _) => true),
+          commonActionProvider.overrideWith(_RaceCommonAction.new),
+          setupActionProvider.overrideWith(_RaceSetupAction.new),
+        ],
+      );
+      addTearDown(container.dispose);
+      container
+          .read(patchClashConfigProvider.notifier)
+          .update((state) => state.copyWith(mode: Mode.direct));
+
+      final action =
+          container.read(setupActionProvider.notifier) as _RaceSetupAction;
+      await action.setRunning(true);
+
+      expect(container.read(patchClashConfigProvider).mode, Mode.rule);
+      await action.setRunning(false);
+    });
+
     group('rapid status changes', () {
       test('updates runtime and traffic while core start is pending', () async {
         final startCompleter = Completer<bool>();

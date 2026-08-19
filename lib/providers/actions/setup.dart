@@ -94,6 +94,11 @@ class SetupAction extends _$SetupAction {
     if (running && !initialize && !ref.read(initProvider)) {
       return Future.value();
     }
+    if (running && ref.read(patchClashConfigProvider).mode != Mode.rule) {
+      ref
+          .read(patchClashConfigProvider.notifier)
+          .update((state) => state.copyWith(mode: Mode.rule));
+    }
 
     final request = _RunRequest(
       running: running,

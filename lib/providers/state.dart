@@ -45,20 +45,7 @@ GroupsState currentGroupsState(Ref ref) {
 
 @riverpod
 NavigationItemsState navigationItemsState(Ref ref) {
-  final openLogs = ref.watch(appSettingProvider).openLogs;
-  final hasProfiles = ref.watch(
-    profilesProvider.select((state) => state.isNotEmpty),
-  );
-  final hasProxies = ref.watch(
-    currentGroupsStateProvider.select((state) => state.value.isNotEmpty),
-  );
-  final isInit = ref.watch(initProvider);
-  return NavigationItemsState(
-    value: navigation.getItems(
-      openLogs: openLogs,
-      hasProxies: !isInit ? hasProfiles : hasProxies,
-    ),
-  );
+  return NavigationItemsState(value: navigation.getItems());
 }
 
 @riverpod
@@ -187,7 +174,7 @@ NavigationState navigationState(Ref ref) {
   );
   final currentIndex = index == -1 ? 0 : index;
   return NavigationState(
-    pageLabel: pageLabel,
+    pageLabel: navigationItems[currentIndex].label,
     navigationItems: navigationItems,
     viewMode: viewMode,
     locale: locale,
@@ -519,15 +506,7 @@ ColorScheme genColorScheme(
 
 @riverpod
 Brightness currentBrightness(Ref ref) {
-  final themeMode = ref.watch(
-    themeSettingProvider.select((state) => state.themeMode),
-  );
-  final systemBrightness = ref.watch(systemBrightnessProvider);
-  return switch (themeMode) {
-    ThemeMode.system => systemBrightness,
-    ThemeMode.light => Brightness.light,
-    ThemeMode.dark => Brightness.dark,
-  };
+  return Brightness.light;
 }
 
 @riverpod

@@ -9,6 +9,7 @@ import 'package:fl_clash/manager/manager.dart';
 import 'package:fl_clash/plugins/app.dart';
 import 'package:fl_clash/providers/providers.dart';
 import 'package:fl_clash/state.dart';
+import 'package:fl_clash/views/loom.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
@@ -36,11 +37,22 @@ class ApplicationState extends ConsumerState<Application> {
     },
   );
 
-  ColorScheme _getAppColorScheme({
-    required Brightness brightness,
-    int? primaryColor,
-  }) {
-    return ref.read(genColorSchemeProvider(brightness));
+  ColorScheme _getAppColorScheme() {
+    return ColorScheme.fromSeed(
+      seedColor: loomAccent,
+      brightness: Brightness.light,
+    ).copyWith(
+      primary: loomAccent,
+      onPrimary: Colors.white,
+      surface: loomBackground,
+      surfaceContainer: Colors.white,
+      surfaceContainerLow: Colors.white,
+      surfaceContainerHighest: const Color(0xFFE6E6E3),
+      onSurface: loomInk,
+      onSurfaceVariant: loomMuted,
+      outline: loomBorder,
+      outlineVariant: const Color(0xFFE6E6E3),
+    );
   }
 
   @override
@@ -138,7 +150,8 @@ class ApplicationState extends ConsumerState<Application> {
         final locale = ref.watch(
           appSettingProvider.select((state) => state.locale),
         );
-        final themeProps = ref.watch(themeSettingProvider);
+        ref.watch(themeSettingProvider.select((state) => state.textScale));
+        final colorScheme = _getAppColorScheme();
         return MaterialApp(
           debugShowCheckedModeBanner: false,
           navigatorKey: globalState.navigatorKey,
@@ -162,22 +175,13 @@ class ApplicationState extends ConsumerState<Application> {
           title: appName,
           locale: utils.getLocaleForString(locale),
           supportedLocales: AppLocalizations.delegate.supportedLocales,
-          themeMode: themeProps.themeMode,
+          themeMode: ThemeMode.light,
           theme: ThemeData(
             useMaterial3: true,
             pageTransitionsTheme: _pageTransitionsTheme,
-            colorScheme: _getAppColorScheme(
-              brightness: Brightness.light,
-              primaryColor: themeProps.primaryColor,
-            ),
-          ),
-          darkTheme: ThemeData(
-            useMaterial3: true,
-            pageTransitionsTheme: _pageTransitionsTheme,
-            colorScheme: _getAppColorScheme(
-              brightness: Brightness.dark,
-              primaryColor: themeProps.primaryColor,
-            ).toPureBlack(themeProps.pureBlack),
+            colorScheme: colorScheme,
+            scaffoldBackgroundColor: loomBackground,
+            dividerColor: colorScheme.outlineVariant,
           ),
           home: child!,
         );

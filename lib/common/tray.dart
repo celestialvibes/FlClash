@@ -1,11 +1,9 @@
 import 'dart:io';
 
-import 'package:fl_clash/enum/enum.dart';
 import 'package:fl_clash/models/models.dart';
 import 'package:fl_clash/providers/providers.dart';
 import 'package:fl_clash/state.dart';
 import 'package:flutter/services.dart';
-import 'package:intl/intl.dart';
 import 'package:tray_manager/tray_manager.dart';
 
 import 'app_localizations.dart';
@@ -74,7 +72,6 @@ class Tray {
     final ref = globalState.container;
     final commonAction = ref.read(commonActionProvider.notifier);
     final systemAction = ref.read(systemActionProvider.notifier);
-    final setupAction = ref.read(setupActionProvider.notifier);
     final appLocalizations = currentAppLocalizations;
     final showMenuItem = MenuItem(
       label: appLocalizations.show,
@@ -100,18 +97,6 @@ class Tray {
         checked: trayState.showTrayTitle,
       );
       menuItems.add(speedStatistics);
-    }
-    menuItems.add(MenuItem.separator());
-    for (final mode in Mode.values) {
-      menuItems.add(
-        MenuItem.checkbox(
-          label: Intl.message(mode.name),
-          onClick: (_) {
-            setupAction.changeMode(mode);
-          },
-          checked: mode == trayState.mode,
-        ),
-      );
     }
     menuItems.add(MenuItem.separator());
     if (system.isMacOS) {

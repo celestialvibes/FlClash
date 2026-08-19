@@ -9,7 +9,7 @@ import 'package:fl_clash/models/models.dart';
 import 'package:fl_clash/pages/home.dart';
 import 'package:fl_clash/providers/providers.dart';
 import 'package:fl_clash/state.dart';
-import 'package:fl_clash/views/application_setting.dart';
+import 'package:fl_clash/views/loom.dart';
 import 'package:fl_clash/views/tools.dart';
 import 'package:fl_clash/widgets/widgets.dart';
 import 'package:flutter/material.dart';
@@ -270,52 +270,32 @@ void main() {
     },
   );
 
-  testWidgets(
-    'desktop navigation keeps the tools route when logs are enabled',
-    (tester) async {
-      tester.view.physicalSize = const Size(1400, 1000);
-      tester.view.devicePixelRatio = 1;
-      addTearDown(tester.view.resetPhysicalSize);
-      addTearDown(tester.view.resetDevicePixelRatio);
+  testWidgets('removed desktop routes fall back to branded home', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(1400, 1000);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
 
-      final container = ProviderContainer();
-      addTearDown(container.dispose);
-      globalState.container = container;
-      container.read(viewSizeProvider.notifier).value = const Size(1400, 1000);
-      container.read(currentPageLabelProvider.notifier).toPage(PageLabel.tools);
+    final container = ProviderContainer();
+    addTearDown(container.dispose);
+    globalState.container = container;
+    container.read(viewSizeProvider.notifier).value = const Size(1400, 1000);
+    container.read(currentPageLabelProvider.notifier).toPage(PageLabel.tools);
 
-      await tester.pumpWidget(
-        UncontrolledProviderScope(
-          container: container,
-          child: const _TestApp(child: HomePage()),
-        ),
-      );
-      await tester.pump();
+    await tester.pumpWidget(
+      UncontrolledProviderScope(
+        container: container,
+        child: const _TestApp(child: HomePage()),
+      ),
+    );
+    await tester.pump();
 
-      final applicationItem = find.text('Application');
-      await tester.scrollUntilVisible(
-        applicationItem,
-        500,
-        scrollable: find.byType(Scrollable).first,
-      );
-      await tester.tap(applicationItem);
-      await tester.pumpAndSettle();
-      expect(find.byType(ApplicationSettingView), findsOneWidget);
-
-      final logItem = find.text('Logcat');
-      await tester.scrollUntilVisible(
-        logItem,
-        500,
-        scrollable: find.byType(Scrollable).first,
-      );
-      await tester.tap(logItem);
-      await tester.pumpAndSettle();
-
-      expect(container.read(appSettingProvider).openLogs, isTrue);
-      expect(find.byType(ApplicationSettingView), findsOneWidget);
-      expect(tester.takeException(), isNull);
-    },
-  );
+    expect(container.read(navigationStateProvider).currentIndex, 0);
+    expect(find.byType(LoomHomeView), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
 
   testWidgets(
     'desktop navigation keeps arrow traversal after keyboard page changes',

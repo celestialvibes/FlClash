@@ -60,33 +60,32 @@ void main() {
         .read(viewSizeProvider.notifier)
         .update((_) => Size(maxMobileWidth.toDouble(), 800));
     final mobile = container.read(currentNavigationItemsStateProvider).value;
-    expect(
-      mobile.map((item) => item.label),
-      containsAll([PageLabel.dashboard, PageLabel.profiles, PageLabel.tools]),
-    );
-    expect(
-      mobile.map((item) => item.label),
-      isNot(contains(PageLabel.connections)),
-    );
+    expect(mobile.map((item) => item.label), [
+      PageLabel.dashboard,
+      PageLabel.proxies,
+      PageLabel.statistics,
+    ]);
 
     container
         .read(viewSizeProvider.notifier)
         .update((_) => const Size(1200, 800));
     container
         .read(currentPageLabelProvider.notifier)
-        .toPage(PageLabel.connections);
+        .toPage(PageLabel.statistics);
     final desktop = container.read(navigationStateProvider);
     expect(desktop.viewMode, ViewMode.desktop);
     expect(desktop.currentIndex, greaterThan(0));
     expect(
       desktop.navigationItems[desktop.currentIndex].label,
-      PageLabel.connections,
+      PageLabel.statistics,
     );
 
     container
         .read(currentPageLabelProvider.notifier)
         .toPage(PageLabel.resources);
-    expect(container.read(navigationStateProvider).currentIndex, 0);
+    final fallback = container.read(navigationStateProvider);
+    expect(fallback.currentIndex, 0);
+    expect(fallback.pageLabel, PageLabel.dashboard);
   });
 
   test('layout and page state providers compose their dependencies', () {
@@ -290,7 +289,7 @@ void main() {
   });
 
   test('theme and simple derived providers cover fallback branches', () {
-    expect(container.read(currentBrightnessProvider), Brightness.dark);
+    expect(container.read(currentBrightnessProvider), Brightness.light);
     container
         .read(systemBrightnessProvider.notifier)
         .update((_) => Brightness.light);

@@ -7,7 +7,6 @@ import 'package:fl_clash/state.dart';
 import 'package:fl_clash/widgets/widgets.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:intl/intl.dart';
 
 typedef OnSelected = void Function(int index);
 
@@ -45,7 +44,7 @@ class HomePage extends ConsumerWidget {
                       .map(
                         (e) => NavigationDestination(
                           icon: e.icon,
-                          label: Intl.message(e.label.name),
+                          label: navigation.getLabel(e.label),
                         ),
                       )
                       .toList(),
@@ -114,8 +113,8 @@ class HomePage extends ConsumerWidget {
                       key: ValueKey(navigationItem.label),
                       builder: (_, ref, child) {
                         final isActive = ref.watch(
-                          currentPageLabelProvider.select(
-                            (label) => label == navigationItem.label,
+                          navigationStateProvider.select(
+                            (state) => state.pageLabel == navigationItem.label,
                           ),
                         );
                         return PageActivityScope(
@@ -176,7 +175,10 @@ class _HomePageViewState extends ConsumerState<_HomePageView> {
 
   int get _pageIndex {
     final pageLabel = ref.read(currentPageLabelProvider);
-    return widget.navigationItems.indexWhere((item) => item.label == pageLabel);
+    final index = widget.navigationItems.indexWhere(
+      (item) => item.label == pageLabel,
+    );
+    return index < 0 ? 0 : index;
   }
 
   Future<void> _toPage(
@@ -244,8 +246,8 @@ class _HomePageViewState extends ConsumerState<_HomePageView> {
 class _NavigationBarDefaultsM3 extends NavigationBarThemeData {
   _NavigationBarDefaultsM3(this.context)
     : super(
-        height: 80.0,
-        elevation: 3.0,
+        height: 72.0,
+        elevation: 0.0,
         labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
       );
 
@@ -254,7 +256,7 @@ class _NavigationBarDefaultsM3 extends NavigationBarThemeData {
   late final TextTheme _textTheme = Theme.of(context).textTheme;
 
   @override
-  Color? get backgroundColor => _colors.surfaceContainer;
+  Color? get backgroundColor => Colors.white;
 
   @override
   Color? get shadowColor => Colors.transparent;
@@ -270,14 +272,14 @@ class _NavigationBarDefaultsM3 extends NavigationBarThemeData {
         color: states.contains(WidgetState.disabled)
             ? _colors.onSurfaceVariant.opacity38
             : states.contains(WidgetState.selected)
-            ? _colors.onSecondaryContainer
+            ? _colors.primary
             : _colors.onSurfaceVariant,
       );
     });
   }
 
   @override
-  Color? get indicatorColor => _colors.secondaryContainer;
+  Color? get indicatorColor => Colors.transparent;
 
   @override
   ShapeBorder? get indicatorShape => const StadiumBorder();
@@ -291,7 +293,7 @@ class _NavigationBarDefaultsM3 extends NavigationBarThemeData {
         color: states.contains(WidgetState.disabled)
             ? _colors.onSurfaceVariant.opacity38
             : states.contains(WidgetState.selected)
-            ? _colors.onSurface
+            ? _colors.primary
             : _colors.onSurfaceVariant,
       );
     });

@@ -106,7 +106,20 @@ class ProfilesAction extends _$ProfilesAction {
     if (globalState.navigatorKey.currentState?.canPop() ?? false) {
       globalState.navigatorKey.currentState?.popUntil((route) => route.isFirst);
     }
-    ref.read(currentPageLabelProvider.notifier).value = PageLabel.profiles;
+    final currentProfile = ref.read(currentProfileProvider);
+    if (currentProfile != null) {
+      final updated = await globalState.safeRun(() async {
+        await updateProfile(
+          currentProfile.copyWith(url: url),
+          showLoading: true,
+        );
+        return true;
+      });
+      if (updated == true) {
+        ref.read(currentPageLabelProvider.notifier).value = PageLabel.dashboard;
+      }
+      return;
+    }
     final profile = await globalState.loadingRun(
       tag: LoadingTag.profiles,
       () async {
@@ -116,6 +129,7 @@ class ProfilesAction extends _$ProfilesAction {
     );
     if (profile != null) {
       putProfile(profile);
+      ref.read(currentPageLabelProvider.notifier).value = PageLabel.dashboard;
     }
   }
 

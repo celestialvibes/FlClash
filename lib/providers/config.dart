@@ -1,4 +1,5 @@
 import 'package:fl_clash/common/common.dart';
+import 'package:fl_clash/enum/enum.dart';
 import 'package:fl_clash/models/models.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
@@ -152,7 +153,7 @@ List<Override> buildConfigOverrides(Config config) {
       (_, _) => config.proxiesStyleProps,
     ),
     patchClashConfigProvider.overrideWithBuild(
-      (_, _) => config.patchClashConfig,
+      (_, _) => config.patchClashConfig.copyWith(mode: Mode.rule),
     ),
     excludeSSIDsProvider.overrideWithBuild((_, _) => config.excludeSSIDs),
   ];

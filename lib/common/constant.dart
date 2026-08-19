@@ -118,7 +118,7 @@ const proxiesListStoreKey = PageStorageKey<String>('proxies_list');
 const toolsStoreKey = PageStorageKey<String>('tools');
 const profilesStoreKey = PageStorageKey<String>('profiles');
 
-const defaultPrimaryColor = 0XFFFF5A1F;
+const defaultPrimaryColor = 0XFFFF3300;
 
 double getWidgetHeight(num lines) {
   final space = 14.mAp;
