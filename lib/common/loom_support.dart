@@ -3,6 +3,7 @@ import 'dart:io';
 
 import 'package:dio/dio.dart';
 import 'package:dio/io.dart';
+import 'package:flutter/foundation.dart';
 
 import 'preferences.dart';
 import 'utils.dart';
@@ -13,7 +14,18 @@ const loomSupportApiBaseUrl = String.fromEnvironment(
 );
 
 const _credentialKey = 'loomSupportCredentialV1';
+const _lastSeenMessageKey = 'loomSupportLastSeenMessageV1';
 const _supportPath = '/api/v1/support';
+
+LoomSupportClient? _sharedLoomSupportClient;
+
+LoomSupportClient sharedLoomSupportClient({
+  required String platform,
+  required String appVersion,
+}) => _sharedLoomSupportClient ??= LoomSupportClient(
+  platform: platform,
+  appVersion: appVersion,
+);
 
 Uri get loomSupportApiUri {
   final uri = Uri.tryParse(loomSupportApiBaseUrl);
@@ -161,6 +173,79 @@ class LoomSupportMessage {
   };
 }
 
+int parseLoomSupportLastSeenMessageId(String? stored, String supportId) {
+  if (stored == null) return 0;
+  try {
+    final value = _map(jsonDecode(stored));
+    final storedSupportId = value['support_id'];
+    final lastSeenMessageId = value['last_seen_message_id'];
+    if (storedSupportId != supportId ||
+        lastSeenMessageId is! num ||
+        lastSeenMessageId < 0) {
+      return 0;
+    }
+    return lastSeenMessageId.toInt();
+  } catch (_) {
+    return 0;
+  }
+}
+
+bool hasUnreadLoomSupportMessages(
+  Iterable<LoomSupportMessage> messages,
+  int lastSeenMessageId,
+) => messages.any(
+  (message) => message.id > lastSeenMessageId && message.senderKind != 'client',
+);
+
+class LoomSupportInbox extends ValueNotifier<bool> {
+  String? _supportId;
+  int _lastSeenMessageId = 0;
+  int _afterId = 0;
+  int _activationRevision = 0;
+
+  LoomSupportInbox() : super(false);
+
+  int get afterId => _afterId;
+
+  Future<void> activate(String supportId) async {
+    if (_supportId == supportId) return;
+    final revision = ++_activationRevision;
+    final stored = await preferences.getString(_lastSeenMessageKey);
+    if (revision != _activationRevision) return;
+    restore(supportId, parseLoomSupportLastSeenMessageId(stored, supportId));
+  }
+
+  void restore(String supportId, int lastSeenMessageId) {
+    _supportId = supportId;
+    _lastSeenMessageId = lastSeenMessageId;
+    _afterId = lastSeenMessageId;
+    value = false;
+  }
+
+  void merge(String supportId, Iterable<LoomSupportMessage> messages) {
+    if (_supportId != supportId) return;
+    final incoming = messages.toList();
+    if (hasUnreadLoomSupportMessages(incoming, _lastSeenMessageId)) {
+      value = true;
+    }
+    for (final message in incoming) {
+      if (message.id > _afterId) _afterId = message.id;
+    }
+  }
+
+  Future<void> markSeenThrough(String supportId, int messageId) async {
+    if (_supportId != supportId || messageId <= _lastSeenMessageId) return;
+    _lastSeenMessageId = messageId;
+    if (_afterId <= messageId) value = false;
+    await preferences.setString(
+      _lastSeenMessageKey,
+      jsonEncode({'support_id': supportId, 'last_seen_message_id': messageId}),
+    );
+  }
+}
+
+final loomSupportInbox = LoomSupportInbox();
+
 class LoomSupportClient {
   final String platform;
   final String appVersion;
@@ -188,15 +273,22 @@ class LoomSupportClient {
     return _credential ?? credential;
   }
 
-  Future<List<LoomSupportMessage>> listMessages({required int afterId}) async {
-    final response = await _withBearer(
-      (token) => _dio.get<Object?>(
-        _url('thread/messages'),
-        queryParameters: {'after_id': afterId, 'limit': 100},
-        options: _options(token),
-      ),
-      openThreadOnReauth: true,
+  Future<List<LoomSupportMessage>> listMessages({
+    required int afterId,
+    bool bootstrapIfMissing = true,
+  }) async {
+    Future<Response<Object?>> request(String token) => _dio.get<Object?>(
+      _url('thread/messages'),
+      queryParameters: {'after_id': afterId, 'limit': 100},
+      options: _options(token),
     );
+    final Response<Object?> response;
+    if (bootstrapIfMissing) {
+      response = await _withBearer(request, openThreadOnReauth: true);
+    } else {
+      if (!await restoreCredential()) return const [];
+      response = await request(_credential!.bearerToken);
+    }
     final data = response.data;
     if (data is! List) throw const FormatException('invalid message list');
     return data
@@ -266,17 +358,22 @@ class LoomSupportClient {
   }
 
   Future<LoomSupportCredential> _loadCredential() async {
-    if (_credential != null) return _credential!;
+    if (await restoreCredential()) return _credential!;
+    return _bootstrap();
+  }
+
+  Future<bool> restoreCredential() async {
+    if (_credential != null) return true;
     final stored = await preferences.getString(_credentialKey);
     if (stored != null) {
       try {
         _credential = LoomSupportCredential.fromJson(_map(jsonDecode(stored)));
-        return _credential!;
+        return true;
       } catch (_) {
         await preferences.remove(_credentialKey);
       }
     }
-    return _bootstrap();
+    return false;
   }
 
   Future<LoomSupportCredential> _bootstrap() async {

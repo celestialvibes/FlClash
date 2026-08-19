@@ -1,4 +1,7 @@
+import 'dart:io';
+
 import 'package:fl_clash/common/common.dart';
+import 'package:fl_clash/common/loom_support.dart';
 import 'package:fl_clash/enum/enum.dart';
 import 'package:fl_clash/manager/app_manager.dart';
 import 'package:fl_clash/models/common.dart';
@@ -11,11 +14,43 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 typedef OnSelected = void Function(int index);
 
-class LoomRootView extends ConsumerWidget {
+class LoomRootView extends ConsumerStatefulWidget {
   const LoomRootView({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<LoomRootView> createState() => _LoomRootViewState();
+}
+
+class _LoomRootViewState extends ConsumerState<LoomRootView>
+    with WidgetsBindingObserver, ActivePollingMixin<LoomRootView> {
+  LoomSupportClient? _supportClient;
+
+  @override
+  Duration get pollInterval => const Duration(seconds: 30);
+
+  @override
+  Future<void> poll(PollGuard isCurrent) async {
+    if (!globalState.isAttach) return;
+    final supportClient = _supportClient ??= sharedLoomSupportClient(
+      platform: Platform.operatingSystem,
+      appVersion: globalState.packageInfo.version,
+    );
+    if (!await supportClient.restoreCredential() || !isCurrent()) return;
+    final supportId = supportClient.credential!.supportId;
+    await loomSupportInbox.activate(supportId);
+    if (!isCurrent()) return;
+    final messages = await supportClient.listMessages(
+      afterId: loomSupportInbox.afterId,
+      bootstrapIfMissing: false,
+    );
+    if (!isCurrent() || supportClient.credential?.supportId != supportId) {
+      return;
+    }
+    loomSupportInbox.merge(supportId, messages);
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final hasProfiles = ref.watch(
       profilesProvider.select((profiles) => profiles.isNotEmpty),
     );

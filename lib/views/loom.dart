@@ -51,9 +51,10 @@ String buildLoomSafeDiagnosticReport({
   required LoomDiagnosticQuota subscriptionQuota,
   required LoomDiagnosticConnectivity connectivity,
 }) {
-  final safeVersion = RegExp(
-    r'^[0-9]+(?:\.[0-9]+){1,3}(?:-[0-9A-Za-z.]+)?(?:\+[0-9A-Za-z.]+)?$',
-  ).hasMatch(appVersion)
+  final safeVersion =
+      RegExp(
+        r'^[0-9]+(?:\.[0-9]+){1,3}(?:-[0-9A-Za-z.]+)?(?:\+[0-9A-Za-z.]+)?$',
+      ).hasMatch(appVersion)
       ? appVersion
       : 'unknown';
   final safePlatform = switch (platform.toLowerCase()) {
@@ -441,7 +442,9 @@ class LoomHelloView extends StatelessWidget {
                 TextButton.icon(
                   onPressed: () =>
                       BaseNavigator.push(context, const LoomSupportView()),
-                  icon: const Icon(Icons.support_agent_outlined, size: 18),
+                  icon: const LoomSupportUnreadBadge(
+                    child: Icon(Icons.support_agent_outlined, size: 18),
+                  ),
                   label: const Text('Нужна помощь?'),
                 ),
               ],
@@ -486,7 +489,9 @@ class LoomHomeView extends ConsumerWidget {
                   onPressed: () {
                     BaseNavigator.push(context, const LoomSettingsView());
                   },
-                  icon: const Icon(Icons.settings_outlined),
+                  icon: const LoomSupportUnreadBadge(
+                    child: Icon(Icons.settings_outlined),
+                  ),
                 ),
               ],
             ),
@@ -984,11 +989,15 @@ class LoomSettingsView extends ConsumerWidget {
                   },
                 ),
                 const Divider(height: 1),
-                LoomSettingsRow(
-                  label: 'Поддержка',
-                  onTap: () {
-                    BaseNavigator.push(context, const LoomSupportView());
-                  },
+                ValueListenableBuilder<bool>(
+                  valueListenable: loomSupportInbox,
+                  builder: (context, unread, child) => LoomSettingsRow(
+                    label: 'Поддержка',
+                    showBadge: unread,
+                    onTap: () {
+                      BaseNavigator.push(context, const LoomSupportView());
+                    },
+                  ),
                 ),
                 const Divider(height: 1),
                 LoomSettingsRow(
@@ -1108,7 +1117,7 @@ class _LoomSupportViewState extends ConsumerState<LoomSupportView>
   @override
   void initState() {
     super.initState();
-    _client = LoomSupportClient(
+    _client = sharedLoomSupportClient(
       platform: Platform.operatingSystem,
       appVersion: globalState.packageInfo.version,
     );
@@ -1132,21 +1141,30 @@ class _LoomSupportViewState extends ConsumerState<LoomSupportView>
         _directRuleReady = true;
       }
       if (!_ready) {
-        await _client.ensureOpenThread();
+        final credential = await _client.ensureOpenThread();
+        await loomSupportInbox.activate(credential.supportId);
         _ready = true;
       }
-      final previousSupportId = _client.credential?.supportId;
-      final messages = await _client.listMessages(afterId: _afterId);
+      var supportId = _client.credential!.supportId;
+      var messages = await _client.listMessages(afterId: _afterId);
+      final currentSupportId = _client.credential!.supportId;
+      final identityChanged = currentSupportId != supportId;
+      if (identityChanged) {
+        supportId = currentSupportId;
+        await loomSupportInbox.activate(supportId);
+        messages = await _client.listMessages(afterId: 0);
+      }
       if (!isCurrent()) return;
       setState(() {
-        if (previousSupportId != null &&
-            previousSupportId != _client.credential?.supportId) {
+        if (identityChanged) {
           _messages.clear();
+          _afterId = 0;
         }
         _merge(messages);
         _loading = false;
         _error = null;
       });
+      await loomSupportInbox.markSeenThrough(supportId, _afterId);
     } catch (_) {
       if (!isCurrent()) return;
       setState(() {
@@ -2249,12 +2267,14 @@ class LoomSettingsRow extends StatelessWidget {
   final String label;
   final String? value;
   final VoidCallback? onTap;
+  final bool showBadge;
 
   const LoomSettingsRow({
     super.key,
     required this.label,
     this.value,
     this.onTap,
+    this.showBadge = false,
   });
 
   @override
@@ -2272,6 +2292,12 @@ class LoomSettingsRow extends StatelessWidget {
       trailing: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
+          Badge(
+            isLabelVisible: showBadge,
+            smallSize: 8,
+            backgroundColor: loomAccent,
+          ),
+          if (showBadge) const SizedBox(width: 8),
           if (value != null)
             Text(
               value!,
@@ -2279,6 +2305,26 @@ class LoomSettingsRow extends StatelessWidget {
             ),
           if (onTap != null) const Icon(Icons.chevron_right, size: 20),
         ],
+      ),
+    );
+  }
+}
+
+class LoomSupportUnreadBadge extends StatelessWidget {
+  final Widget child;
+
+  const LoomSupportUnreadBadge({super.key, required this.child});
+
+  @override
+  Widget build(BuildContext context) {
+    return ValueListenableBuilder<bool>(
+      valueListenable: loomSupportInbox,
+      child: child,
+      builder: (context, unread, child) => Badge(
+        isLabelVisible: unread,
+        smallSize: 8,
+        backgroundColor: loomAccent,
+        child: child,
       ),
     );
   }
