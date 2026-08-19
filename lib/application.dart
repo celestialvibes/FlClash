@@ -163,11 +163,9 @@ class ApplicationState extends ConsumerState<Application> {
             GlobalWidgetsLocalizations.delegate,
           ],
           builder: (_, child) {
-            return AppEnvManager(
-              child: _buildApp(
-                child: _buildPlatformState(
-                  child: _buildState(child: _buildPlatformApp(child: child!)),
-                ),
+            return _buildApp(
+              child: _buildPlatformState(
+                child: _buildState(child: _buildPlatformApp(child: child!)),
               ),
             );
           },

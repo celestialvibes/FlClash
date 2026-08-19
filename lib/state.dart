@@ -36,8 +36,6 @@ class GlobalState {
   bool needInitStatus = true;
   bool _didCrashOnPreviousExecution = false;
 
-  bool get isPre => appEnv != 'stable';
-
   bool get canCrashCore => canCrashCoreFor(isDebug: kDebugMode, appEnv: appEnv);
 
   @visibleForTesting

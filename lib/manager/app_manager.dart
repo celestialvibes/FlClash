@@ -7,7 +7,6 @@ import 'package:fl_clash/manager/window_manager.dart';
 import 'package:fl_clash/providers/providers.dart';
 import 'package:fl_clash/state.dart';
 import 'package:fl_clash/widgets/animated_visibility.dart';
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -104,33 +103,6 @@ class _AppStateManagerState extends ConsumerState<AppStateManager>
       },
       child: widget.child,
     );
-  }
-}
-
-class AppEnvManager extends StatelessWidget {
-  final Widget child;
-
-  const AppEnvManager({super.key, required this.child});
-
-  @override
-  Widget build(BuildContext context) {
-    if (kDebugMode) {
-      if (globalState.isPre) {
-        return Banner(
-          message: 'DEBUG',
-          location: BannerLocation.topEnd,
-          child: child,
-        );
-      }
-    }
-    if (globalState.isPre) {
-      return Banner(
-        message: globalState.appEnv.toUpperCase(),
-        location: BannerLocation.topEnd,
-        child: child,
-      );
-    }
-    return child;
   }
 }
 
