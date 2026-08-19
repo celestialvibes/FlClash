@@ -14,7 +14,10 @@ class MacosProxy {
     final service = await _primaryNetworkService();
     if (service == null) return false;
 
-    final previousServices = _configuredServices.difference({service});
+    final previousServices = {
+      ..._configuredServices,
+      ...await _staleLoomProxyServices(),
+    }..remove(service);
     if (previousServices.isNotEmpty) {
       final stopped = await _commandRunner.run(
         previousServices.expand(MacosProxyCommands.buildStop),
@@ -42,9 +45,10 @@ class MacosProxy {
   }
 
   Future<bool> stop() async {
-    final services = _configuredServices.isNotEmpty
-        ? _configuredServices.toList()
-        : await _staleLoomProxyServices();
+    final services = {
+      ..._configuredServices,
+      ...await _staleLoomProxyServices(),
+    };
     if (services.isEmpty) {
       await _disarmWatchdogs();
       return true;
@@ -61,17 +65,17 @@ class MacosProxy {
 
   Future<String?> _primaryNetworkService() async {
     try {
-      final route = await _commandRunner.process('/sbin/route', [
-        '-n',
-        'get',
-        'default',
+      final routes = await _commandRunner.process('/usr/sbin/netstat', [
+        '-rn',
+        '-f',
+        'inet',
       ]);
       final services = await _commandRunner.process('/usr/sbin/networksetup', [
         '-listnetworkserviceorder',
       ]);
-      if (route.exitCode != 0 || services.exitCode != 0) return null;
+      if (routes.exitCode != 0 || services.exitCode != 0) return null;
       return MacosProxyCommands.parsePrimaryNetworkService(
-        route.stdout.toString(),
+        routes.stdout.toString(),
         services.stdout.toString(),
       );
     } on ProcessException {
@@ -80,8 +84,27 @@ class MacosProxy {
   }
 
   Future<List<String>> _staleLoomProxyServices() async {
-    final service = await _primaryNetworkService();
-    if (service == null) return const [];
+    final services = await _networkServices();
+    final staleServices = <String>[];
+    for (final service in services) {
+      if (await _isLoomProxyService(service)) staleServices.add(service);
+    }
+    return staleServices;
+  }
+
+  Future<List<String>> _networkServices() async {
+    try {
+      final result = await _commandRunner.process('/usr/sbin/networksetup', [
+        '-listallnetworkservices',
+      ]);
+      if (result.exitCode != 0) return const [];
+      return MacosProxyCommands.parseNetworkServices(result.stdout.toString());
+    } on ProcessException {
+      return const [];
+    }
+  }
+
+  Future<bool> _isLoomProxyService(String service) async {
     try {
       final results = await Future.wait(
         ['-getwebproxy', '-getsecurewebproxy', '-getsocksfirewallproxy'].map(
@@ -91,14 +114,12 @@ class MacosProxy {
           ]),
         ),
       );
-      if (results.any((result) => result.exitCode != 0)) return const [];
-      return MacosProxyCommands.isLoomProxy(
+      return results.every((result) => result.exitCode == 0) &&
+          MacosProxyCommands.isLoomProxy(
             results.map((result) => result.stdout.toString()),
-          )
-          ? [service]
-          : const [];
+          );
     } on ProcessException {
-      return const [];
+      return false;
     }
   }
 
@@ -189,15 +210,10 @@ fi
   }
 
   static String? parsePrimaryNetworkService(
-    String routeOutput,
+    String routeTableOutput,
     String serviceOrderOutput,
   ) {
-    final interface = RegExp(
-      r'^\s*interface:\s*(\S+)\s*$',
-      multiLine: true,
-    ).firstMatch(routeOutput)?.group(1);
-    if (interface == null) return null;
-
+    final servicesByDevice = <String, String>{};
     final lines = serviceOrderOutput.split('\n');
     for (var index = 0; index + 1 < lines.length; index++) {
       final service = RegExp(r'^\(\d+\)\s+(.+)$').firstMatch(lines[index]);
@@ -205,7 +221,17 @@ fi
       final device = RegExp(
         r'Device:\s*([^\)]+)\)',
       ).firstMatch(lines[index + 1])?.group(1)?.trim();
-      if (device == interface) return service.group(1)?.trim();
+      final serviceName = service.group(1)?.trim();
+      if (device != null && device.isNotEmpty && serviceName != null) {
+        servicesByDevice[device] = serviceName;
+      }
+    }
+    for (final line in routeTableOutput.split('\n')) {
+      final fields = line.trim().split(RegExp(r'\s+'));
+      if (fields.length >= 4 && fields.first == 'default') {
+        final service = servicesByDevice[fields[3]];
+        if (service != null) return service;
+      }
     }
     return null;
   }
@@ -232,6 +258,16 @@ fi
       port = currentPort;
     }
     return true;
+  }
+
+  static List<String> parseNetworkServices(String stdout) {
+    return stdout
+        .split('\n')
+        .map((line) => line.trim())
+        .where((line) => line.isNotEmpty)
+        .where((line) => !line.startsWith('*'))
+        .where((line) => !line.startsWith('An asterisk '))
+        .toList();
   }
 
   static List<ProxyCommand> buildStart(

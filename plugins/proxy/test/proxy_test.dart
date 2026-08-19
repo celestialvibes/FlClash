@@ -285,10 +285,24 @@ void main() {
   });
 
   group('macOS proxy command builders', () {
-    test('selects only the service backing the default route', () {
+    test('finds every enabled network service for stale cleanup', () {
+      final services = MacosProxyCommands.parseNetworkServices('''
+An asterisk (*) denotes that a network service is disabled.
+Wi-Fi
+*Thunderbolt Bridge
+Tailscale
+Happ
+''');
+
+      expect(services, ['Wi-Fi', 'Tailscale', 'Happ']);
+    });
+
+    test('skips VPN routes and selects the physical default service', () {
       final service = MacosProxyCommands.parsePrimaryNetworkService(
         '''
-  interface: en0
+Destination        Gateway            Flags               Netif Expire
+default            link#24            UCSg                utun5
+default            192.168.0.1        UGScIg                en0
 ''',
         '''
 An asterisk (*) denotes that a network service is disabled.
