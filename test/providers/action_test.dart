@@ -318,6 +318,42 @@ void main() {
   });
 
   group('SetupAction', () {
+    test('macOS LOOM starts only after TUN authorization', () async {
+      late _LoomTunSetupAction action;
+      final container = ProviderContainer(
+        overrides: [
+          initProvider.overrideWithBuild((_, _) => true),
+          commonActionProvider.overrideWith(_RaceCommonAction.new),
+          setupActionProvider.overrideWith(() {
+            action = _LoomTunSetupAction([
+              AuthorizeCode.error,
+              AuthorizeCode.none,
+            ]);
+            return action;
+          }),
+        ],
+      );
+      addTearDown(container.dispose);
+      container.read(setupActionProvider);
+
+      await action.setRunning(true);
+
+      expect(container.read(patchClashConfigProvider).tun.enable, isTrue);
+      expect(container.read(isStartProvider), isFalse);
+      expect(action.transitions, isEmpty);
+      expect(
+        container.read(authorizedTunEnableProvider),
+        TunAuthorizationState.none,
+      );
+
+      await action.setRunning(true);
+
+      expect(container.read(isStartProvider), isTrue);
+      expect(action.transitions, [true]);
+      expect(action.authorizationRequestCount, 2);
+      await action.setRunning(false);
+    });
+
     test('normalizes LOOM starts to rule mode', () async {
       final container = ProviderContainer(
         overrides: [
@@ -768,6 +804,21 @@ class _RaceSetupAction extends SetupAction {
   @override
   void resetCoreTraffic() {
     resetCoreTrafficCount++;
+  }
+}
+
+class _LoomTunSetupAction extends _RaceSetupAction {
+  final List<AuthorizeCode> authorizationResults;
+  int authorizationRequestCount = 0;
+
+  _LoomTunSetupAction(this.authorizationResults);
+
+  @override
+  bool get requireTunOnStart => true;
+
+  @override
+  Future<AuthorizeCode> authorizeCore() async {
+    return authorizationResults[authorizationRequestCount++];
   }
 }
 

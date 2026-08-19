@@ -90,14 +90,12 @@ class SetupAction extends _$SetupAction {
     }
   }
 
-  Future<void> setRunning(bool running, {bool initialize = false}) {
+  @protected
+  bool get requireTunOnStart => system.isMacOS;
+
+  Future<void> setRunning(bool running, {bool initialize = false}) async {
     if (running && !initialize && !ref.read(initProvider)) {
-      return Future.value();
-    }
-    if (running && ref.read(patchClashConfigProvider).mode != Mode.rule) {
-      ref
-          .read(patchClashConfigProvider.notifier)
-          .update((state) => state.copyWith(mode: Mode.rule));
+      return;
     }
 
     final request = _RunRequest(
@@ -105,11 +103,39 @@ class SetupAction extends _$SetupAction {
       initialize: running && initialize,
     );
     _latestRunRequest = request;
+
+    if (running && requireTunOnStart) {
+      final patchConfig = ref.read(patchClashConfigProvider);
+      if (!patchConfig.tun.enable) {
+        ref
+            .read(patchClashConfigProvider.notifier)
+            .update((state) => state.copyWith.tun(enable: true));
+      }
+      final shouldContinueSetup = await requestAdmin(true);
+      if (!_isCurrent(request)) return;
+      if (ref.read(authorizedTunEnableProvider) !=
+          TunAuthorizationState.authorized) {
+        ref.read(authorizedTunEnableProvider.notifier).value =
+            TunAuthorizationState.none;
+        _setLocalRunning(false);
+        return;
+      }
+      if (!shouldContinueSetup) {
+        await _restartCoreAfterAuthorization();
+        if (!_isCurrent(request)) return;
+      }
+    }
+
+    if (running && ref.read(patchClashConfigProvider).mode != Mode.rule) {
+      ref
+          .read(patchClashConfigProvider.notifier)
+          .update((state) => state.copyWith(mode: Mode.rule));
+    }
     _setLocalRunning(running);
     if (request.initialize) {
       globalState.needInitStatus = false;
     }
-    return running ? _start(request) : _stop(request);
+    await (running ? _start(request) : _stop(request));
   }
 
   Future<void> _start(_RunRequest request) async {

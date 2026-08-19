@@ -3,7 +3,6 @@ import 'dart:io';
 import 'package:fl_clash/models/models.dart';
 import 'package:fl_clash/providers/providers.dart';
 import 'package:fl_clash/state.dart';
-import 'package:flutter/services.dart';
 import 'package:tray_manager/tray_manager.dart';
 
 import 'app_localizations.dart';
@@ -130,27 +129,6 @@ class Tray {
         menuItems.add(MenuItem.separator());
       }
     }
-    if (trayState.isStart) {
-      menuItems.add(
-        MenuItem.checkbox(
-          label: appLocalizations.tun,
-          onClick: (_) {
-            systemAction.updateTun();
-          },
-          checked: trayState.tunEnable,
-        ),
-      );
-      menuItems.add(
-        MenuItem.checkbox(
-          label: appLocalizations.systemProxy,
-          onClick: (_) {
-            systemAction.updateSystemProxy();
-          },
-          checked: trayState.systemProxy,
-        ),
-      );
-      menuItems.add(MenuItem.separator());
-    }
     final autoStartMenuItem = MenuItem.checkbox(
       label: appLocalizations.autoLaunch,
       onClick: (_) async {
@@ -158,14 +136,7 @@ class Tray {
       },
       checked: trayState.autoLaunch,
     );
-    final copyEnvVarMenuItem = MenuItem(
-      label: appLocalizations.copyEnvVar,
-      onClick: (_) async {
-        await _copyEnv(trayState.port);
-      },
-    );
     menuItems.add(autoStartMenuItem);
-    menuItems.add(copyEnvVarMenuItem);
     menuItems.add(MenuItem.separator());
     final exitMenuItem = MenuItem(
       label: appLocalizations.exit,
@@ -197,16 +168,6 @@ class Tray {
     } else {
       await trayManager.setTitle(traffic.trayTitle);
     }
-  }
-
-  Future<void> _copyEnv(int port) async {
-    final url = 'http://127.0.0.1:$port';
-
-    final cmdline = system.isWindows
-        ? 'set \$env:all_proxy=$url'
-        : 'export all_proxy=$url';
-
-    await Clipboard.setData(ClipboardData(text: cmdline));
   }
 }
 
