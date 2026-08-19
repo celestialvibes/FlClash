@@ -38,7 +38,7 @@ void main() {
     );
 
     expect(find.text('LOOM.'), findsOneWidget);
-    expect(find.text('ДОБРО ПОЖАЛОВАТЬ\nВ LOOM.'), findsOneWidget);
+    expect(find.text('Личная сеть.\nНа вашей стороне.'), findsOneWidget);
     expect(find.text('ПОЛУЧИТЬ ПОДПИСКУ'), findsOneWidget);
     expect(find.text('ЕСТЬ ПОДПИСКА?'), findsOneWidget);
     expect(find.text('Нужна помощь?'), findsOneWidget);

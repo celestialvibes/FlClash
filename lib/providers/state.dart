@@ -500,7 +500,7 @@ ColorScheme genColorScheme(
 
 @riverpod
 Brightness currentBrightness(Ref ref) {
-  return Brightness.light;
+  return Brightness.dark;
 }
 
 @riverpod

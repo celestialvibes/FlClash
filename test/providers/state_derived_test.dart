@@ -307,14 +307,14 @@ void main() {
   });
 
   test('theme and simple derived providers cover fallback branches', () {
-    expect(container.read(currentBrightnessProvider), Brightness.light);
+    expect(container.read(currentBrightnessProvider), Brightness.dark);
     container
         .read(systemBrightnessProvider.notifier)
         .update((_) => Brightness.light);
     container
         .read(themeSettingProvider.notifier)
         .update((state) => state.copyWith(themeMode: ThemeMode.system));
-    expect(container.read(currentBrightnessProvider), Brightness.light);
+    expect(container.read(currentBrightnessProvider), Brightness.dark);
 
     final fallback = container.read(
       genColorSchemeProvider(Brightness.light, ignoreConfig: true),

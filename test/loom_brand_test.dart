@@ -42,6 +42,13 @@ void main() {
     final rule = createLoomAdblockRule();
 
     expect(loomAccent.toARGB32(), 0xFFFF3300);
+    expect(loomBackground.toARGB32(), 0xFF090909);
+    expect(loomSurface.toARGB32(), 0xFF111111);
+    expect(loomSurfaceRaised.toARGB32(), 0xFF1A1A1A);
+    expect(loomInk.toARGB32(), 0xFFF5F5F2);
+    expect(loomMuted.toARGB32(), 0xFF8A8A86);
+    expect(loomBorder.toARGB32(), 0xFF30302D);
+    expect(loomSuccess.toARGB32(), 0xFF6CF39A);
     expect(rule.rawValue, 'GEOSITE,category-ads-all,REJECT');
     expect(isLoomAdblockRule(rule), isTrue);
     expect(isLoomAdblockRule(Rule.parse('GEOSITE,private,DIRECT')), isFalse);

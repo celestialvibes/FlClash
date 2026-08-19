@@ -22,10 +22,13 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
 const loomAccent = Color(0xFFFF3300);
-const loomBackground = Color(0xFFF2F2EF);
-const loomInk = Color(0xFF0F0F0F);
-const loomMuted = Color(0xFF666666);
-const loomBorder = Color(0xFFD8D8D5);
+const loomBackground = Color(0xFF090909);
+const loomSurface = Color(0xFF111111);
+const loomSurfaceRaised = Color(0xFF1A1A1A);
+const loomInk = Color(0xFFF5F5F2);
+const loomMuted = Color(0xFF8A8A86);
+const loomBorder = Color(0xFF30302D);
+const loomSuccess = Color(0xFF6CF39A);
 
 const loomSubscriptionUrl = 'https://t.me/l00mvpn_bot';
 const loomGuideUrl = 'https://loomhost.ru/start';
@@ -414,18 +417,18 @@ class LoomHelloView extends StatelessWidget {
                 ),
                 const SizedBox(height: 42),
                 const Text(
-                  'ДОБРО ПОЖАЛОВАТЬ\nВ LOOM.',
+                  'Личная сеть.\nНа вашей стороне.',
                   style: TextStyle(
                     color: loomInk,
-                    fontSize: 38,
-                    height: 0.92,
-                    fontWeight: FontWeight.w900,
-                    letterSpacing: -1.8,
+                    fontSize: 42,
+                    height: 0.94,
+                    fontWeight: FontWeight.w500,
+                    letterSpacing: -2.6,
                   ),
                 ),
                 const SizedBox(height: 18),
                 const Text(
-                  'Оформите подписку — бот выдаст ссылку для подключения.',
+                  'Один понятный маршрут от подписки до защищённого подключения.',
                   style: TextStyle(color: loomMuted, fontSize: 14, height: 1.4),
                 ),
                 const SizedBox(height: 34),
@@ -510,14 +513,14 @@ class LoomHomeView extends ConsumerWidget {
                     children: [
                       Text(
                         isStarted
-                            ? 'СОЕДИНЕНИЕ\nЗАЩИЩЕНО'
-                            : 'ИНТЕРНЕТ\nБЕЗ ЗАЩИТЫ',
+                            ? 'Соединение\nзащищено'
+                            : 'Готово к\nподключению',
                         style: const TextStyle(
                           color: loomInk,
-                          fontSize: 26,
-                          height: 0.95,
-                          fontWeight: FontWeight.w900,
-                          letterSpacing: -1.2,
+                          fontSize: 32,
+                          height: 0.94,
+                          fontWeight: FontWeight.w500,
+                          letterSpacing: -1.8,
                         ),
                       ),
                       const SizedBox(height: 12),
@@ -686,9 +689,9 @@ class _LoomServersViewState extends ConsumerState<LoomServersView> {
                   textAlign: TextAlign.center,
                   style: TextStyle(
                     color: loomInk,
-                    fontWeight: FontWeight.w900,
+                    fontWeight: FontWeight.w500,
                     fontSize: 20,
-                    letterSpacing: -0.6,
+                    letterSpacing: -0.9,
                   ),
                 ),
               ),
@@ -713,13 +716,13 @@ class _LoomServersViewState extends ConsumerState<LoomServersView> {
               hintText: 'Поиск сервера',
               prefixIcon: Icon(Icons.search),
               filled: true,
-              fillColor: Colors.white,
+              fillColor: loomSurface,
               border: OutlineInputBorder(
-                borderRadius: BorderRadius.all(Radius.circular(8)),
+                borderRadius: BorderRadius.all(Radius.circular(3)),
                 borderSide: BorderSide(color: loomBorder),
               ),
               enabledBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.all(Radius.circular(8)),
+                borderRadius: BorderRadius.all(Radius.circular(3)),
                 borderSide: BorderSide(color: loomBorder),
               ),
             ),
@@ -789,9 +792,9 @@ class LoomStatisticsView extends ConsumerWidget {
               textAlign: TextAlign.center,
               style: TextStyle(
                 color: loomInk,
-                fontWeight: FontWeight.w900,
+                fontWeight: FontWeight.w500,
                 fontSize: 20,
-                letterSpacing: -0.6,
+                letterSpacing: -0.9,
               ),
             ),
             const SizedBox(height: 18),
@@ -1788,9 +1791,9 @@ class _LoomSupportViewState extends ConsumerState<LoomSupportView>
         margin: const EdgeInsets.only(bottom: 8),
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
         decoration: BoxDecoration(
-          color: mine ? loomAccent : Colors.white,
+          color: mine ? loomAccent : loomSurfaceRaised,
           border: mine ? null : Border.all(color: loomBorder),
-          borderRadius: BorderRadius.circular(14),
+          borderRadius: BorderRadius.circular(4),
         ),
         child: SelectableText(
           message.text,
@@ -1984,7 +1987,7 @@ class _LoomSupportViewState extends ConsumerState<LoomSupportView>
                   decoration: const InputDecoration(
                     hintText: 'Сообщение',
                     filled: true,
-                    fillColor: Colors.white,
+                    fillColor: loomSurface,
                     border: OutlineInputBorder(),
                   ),
                 ),
@@ -2050,17 +2053,14 @@ class LoomSubscriptionView extends ConsumerWidget {
                     style: const TextStyle(
                       color: loomInk,
                       fontSize: 28,
-                      fontWeight: FontWeight.w900,
-                      letterSpacing: -1,
+                      fontWeight: FontWeight.w500,
+                      letterSpacing: -1.4,
                     ),
                   ),
                   const SizedBox(height: 5),
                   Text(
                     'Действует до $expires',
-                    style: const TextStyle(
-                      color: Color(0xFF14963C),
-                      fontSize: 12,
-                    ),
+                    style: const TextStyle(color: loomSuccess, fontSize: 12),
                   ),
                   const SizedBox(height: 20),
                   LoomValueRow(
@@ -2179,14 +2179,22 @@ class LoomWordmark extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const Text(
-      'LOOM.',
+    return const Text.rich(
+      TextSpan(
+        text: 'LOOM',
+        children: [
+          TextSpan(
+            text: '.',
+            style: TextStyle(color: loomAccent),
+          ),
+        ],
+      ),
       style: TextStyle(
         color: loomInk,
-        fontSize: 25,
+        fontSize: 23,
         height: 1,
-        fontWeight: FontWeight.w900,
-        letterSpacing: -1.8,
+        fontWeight: FontWeight.w800,
+        letterSpacing: -1.6,
       ),
     );
   }
@@ -2199,7 +2207,7 @@ class LoomStatus extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final color = isStarted ? const Color(0xFF14963C) : loomAccent;
+    final color = isStarted ? loomSuccess : loomMuted;
     return Row(
       children: [
         Icon(Icons.circle, color: color, size: 8),
@@ -2240,23 +2248,26 @@ class LoomPowerButton extends StatelessWidget {
                 : 'Подключить VPN'
           : 'Добавить подписку',
       child: Container(
-        width: 108,
-        height: 108,
-        padding: const EdgeInsets.all(7),
+        width: 116,
+        height: 116,
+        padding: const EdgeInsets.all(8),
         decoration: BoxDecoration(
           shape: BoxShape.circle,
           border: Border.all(color: enabled ? loomAccent : loomBorder),
+          boxShadow: enabled
+              ? const [BoxShadow(color: Color(0x22FF3300), blurRadius: 34)]
+              : null,
         ),
         child: Material(
-          color: enabled ? loomAccent : loomBorder,
+          color: loomBackground,
           shape: const CircleBorder(),
           child: InkWell(
             customBorder: const CircleBorder(),
             onTap: onPressed,
             child: Icon(
               enabled ? Icons.power_settings_new : Icons.add_link,
-              size: 42,
-              color: Colors.white,
+              size: 38,
+              color: enabled ? loomInk : loomMuted,
             ),
           ),
         ),
@@ -2280,11 +2291,11 @@ class LoomCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final shape = RoundedRectangleBorder(
-      borderRadius: BorderRadius.circular(8),
+      borderRadius: BorderRadius.circular(4),
       side: const BorderSide(color: loomBorder),
     );
     return Material(
-      color: Colors.white,
+      color: loomSurface,
       shape: shape,
       clipBehavior: Clip.antiAlias,
       child: InkWell(
@@ -2305,10 +2316,10 @@ class LoomEyebrow extends StatelessWidget {
     return Text(
       text,
       style: const TextStyle(
-        color: loomMuted,
+        color: loomAccent,
         fontSize: 9,
-        fontWeight: FontWeight.w700,
-        letterSpacing: 0.8,
+        fontWeight: FontWeight.w600,
+        letterSpacing: 1.3,
       ),
     );
   }
@@ -2401,7 +2412,7 @@ class LoomPrimaryButton extends StatelessWidget {
     final style = ButtonStyle(
       minimumSize: const WidgetStatePropertyAll(Size.fromHeight(50)),
       shape: WidgetStatePropertyAll(
-        RoundedRectangleBorder(borderRadius: BorderRadius.circular(999)),
+        RoundedRectangleBorder(borderRadius: BorderRadius.circular(3)),
       ),
     );
     return SizedBox(
@@ -2410,7 +2421,9 @@ class LoomPrimaryButton extends StatelessWidget {
           ? OutlinedButton(
               style: style.copyWith(
                 foregroundColor: const WidgetStatePropertyAll(loomInk),
-                side: const WidgetStatePropertyAll(BorderSide(color: loomInk)),
+                side: const WidgetStatePropertyAll(
+                  BorderSide(color: loomBorder),
+                ),
               ),
               onPressed: onPressed,
               child: child,

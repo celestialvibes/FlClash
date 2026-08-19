@@ -304,7 +304,7 @@ class _NavigationBarDefaultsM3 extends NavigationBarThemeData {
   late final TextTheme _textTheme = Theme.of(context).textTheme;
 
   @override
-  Color? get backgroundColor => Colors.white;
+  Color? get backgroundColor => loomBackground;
 
   @override
   Color? get shadowColor => Colors.transparent;

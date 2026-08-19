@@ -40,18 +40,88 @@ class ApplicationState extends ConsumerState<Application> {
   ColorScheme _getAppColorScheme() {
     return ColorScheme.fromSeed(
       seedColor: loomAccent,
-      brightness: Brightness.light,
+      brightness: Brightness.dark,
     ).copyWith(
       primary: loomAccent,
       onPrimary: Colors.white,
+      secondary: loomSuccess,
+      onSecondary: loomBackground,
       surface: loomBackground,
-      surfaceContainer: Colors.white,
-      surfaceContainerLow: Colors.white,
-      surfaceContainerHighest: const Color(0xFFE6E6E3),
+      surfaceContainer: loomSurface,
+      surfaceContainerLow: loomSurface,
+      surfaceContainerHighest: loomSurfaceRaised,
       onSurface: loomInk,
       onSurfaceVariant: loomMuted,
       outline: loomBorder,
-      outlineVariant: const Color(0xFFE6E6E3),
+      outlineVariant: loomBorder,
+    );
+  }
+
+  ThemeData _getAppTheme(ColorScheme colorScheme) {
+    const inputBorder = OutlineInputBorder(
+      borderRadius: BorderRadius.all(Radius.circular(3)),
+      borderSide: BorderSide(color: loomBorder),
+    );
+    return ThemeData(
+      useMaterial3: true,
+      brightness: Brightness.dark,
+      fontFamily: 'Inter',
+      pageTransitionsTheme: _pageTransitionsTheme,
+      colorScheme: colorScheme,
+      scaffoldBackgroundColor: loomBackground,
+      dividerColor: loomBorder,
+      appBarTheme: const AppBarTheme(
+        backgroundColor: loomBackground,
+        foregroundColor: loomInk,
+        surfaceTintColor: Colors.transparent,
+        elevation: 0,
+      ),
+      inputDecorationTheme: const InputDecorationTheme(
+        filled: true,
+        fillColor: loomSurface,
+        border: inputBorder,
+        enabledBorder: inputBorder,
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.all(Radius.circular(3)),
+          borderSide: BorderSide(color: loomAccent),
+        ),
+      ),
+      filledButtonTheme: FilledButtonThemeData(
+        style: FilledButton.styleFrom(
+          backgroundColor: loomAccent,
+          foregroundColor: Colors.white,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(3)),
+        ),
+      ),
+      outlinedButtonTheme: OutlinedButtonThemeData(
+        style: OutlinedButton.styleFrom(
+          foregroundColor: loomInk,
+          side: const BorderSide(color: loomBorder),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(3)),
+        ),
+      ),
+      chipTheme: ChipThemeData(
+        backgroundColor: loomSurface,
+        disabledColor: loomSurface,
+        selectedColor: loomSurfaceRaised,
+        side: const BorderSide(color: loomBorder),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(3)),
+        labelStyle: const TextStyle(color: loomInk, fontSize: 11),
+      ),
+      dialogTheme: const DialogThemeData(
+        backgroundColor: loomSurface,
+        surfaceTintColor: Colors.transparent,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.all(Radius.circular(4)),
+          side: BorderSide(color: loomBorder),
+        ),
+      ),
+      navigationRailTheme: const NavigationRailThemeData(
+        backgroundColor: loomBackground,
+        indicatorColor: loomSurfaceRaised,
+        selectedIconTheme: IconThemeData(color: loomAccent),
+        unselectedIconTheme: IconThemeData(color: loomMuted),
+      ),
     );
   }
 
@@ -173,14 +243,9 @@ class ApplicationState extends ConsumerState<Application> {
           title: appName,
           locale: utils.getLocaleForString(locale),
           supportedLocales: AppLocalizations.delegate.supportedLocales,
-          themeMode: ThemeMode.light,
-          theme: ThemeData(
-            useMaterial3: true,
-            pageTransitionsTheme: _pageTransitionsTheme,
-            colorScheme: colorScheme,
-            scaffoldBackgroundColor: loomBackground,
-            dividerColor: colorScheme.outlineVariant,
-          ),
+          themeMode: ThemeMode.dark,
+          theme: _getAppTheme(colorScheme),
+          darkTheme: _getAppTheme(colorScheme),
           home: child!,
         );
       },
