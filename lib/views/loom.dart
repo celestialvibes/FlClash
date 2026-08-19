@@ -1,6 +1,10 @@
+import 'dart:convert';
 import 'dart:io';
 
 import 'package:collection/collection.dart';
+import 'package:connectivity_plus/connectivity_plus.dart';
+import 'package:crypto/crypto.dart';
+import 'package:device_info_plus/device_info_plus.dart';
 import 'package:fl_clash/common/common.dart';
 import 'package:fl_clash/database/database.dart';
 import 'package:fl_clash/enum/enum.dart';
@@ -13,6 +17,7 @@ import 'package:fl_clash/views/proxies/common.dart';
 import 'package:fl_clash/widgets/widgets.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 
 const loomAccent = Color(0xFFFF3300);
@@ -26,6 +31,59 @@ const loomSubscriptionUrl = 'https://t.me/l00mvpn_bot';
 const loomGuideUrl = 'https://loomhost.ru/start';
 const loomStatusUrl = 'https://loomhost.ru/';
 const loomAdblockGeosite = 'category-ads-all';
+
+String buildLoomDiagnosticReport({
+  required String appVersion,
+  required String systemName,
+  required String deviceName,
+  required String network,
+  required String publicIp,
+  required String countryCode,
+  required String vpnState,
+  required String coreState,
+  required String profileUrl,
+  required String server,
+  required String protocol,
+  required bool adblockEnabled,
+  required int directRoutes,
+}) {
+  final supportId = profileUrl.isEmpty
+      ? '—'
+      : sha256.convert(utf8.encode(profileUrl)).toString().substring(0, 12);
+  return [
+    'LOOM diagnostics',
+    'Support ID: $supportId',
+    'App: $appVersion',
+    'System: $systemName',
+    'Device: $deviceName',
+    'Network: $network',
+    'Public IP: $publicIp${countryCode.isEmpty ? '' : ' ($countryCode)'}',
+    'VPN: $vpnState',
+    'Core: $coreState',
+    'Server: $server',
+    'Protocol: $protocol',
+    'Adblock: ${adblockEnabled ? 'on' : 'off'}',
+    'Direct routes: $directRoutes',
+  ].join('\n');
+}
+
+Future<({String device, String system})> _loomDeviceInfo() async {
+  final info = await DeviceInfoPlugin().deviceInfo;
+  return switch (info) {
+    MacOsDeviceInfo(:final modelName, :final arch, :final osRelease) => (
+      device: '$modelName ($arch)',
+      system: 'macOS $osRelease',
+    ),
+    AndroidDeviceInfo(:final manufacturer, :final model, :final version) => (
+      device: '$manufacturer $model',
+      system: 'Android ${version.release} (SDK ${version.sdkInt})',
+    ),
+    _ => (
+      device: Platform.operatingSystem,
+      system: Platform.operatingSystemVersion,
+    ),
+  };
+}
 
 Rule createLoomAdblockRule() =>
     Rule.parse('GEOSITE,$loomAdblockGeosite,REJECT');
@@ -911,11 +969,72 @@ class LoomSplitTunnelView extends ConsumerWidget {
   }
 }
 
-class LoomSupportView extends StatelessWidget {
+class LoomSupportView extends ConsumerWidget {
   const LoomSupportView({super.key});
 
+  Future<void> _copyDiagnostics(
+    BuildContext context,
+    WidgetRef ref, {
+    required Profile? profile,
+    required Proxy? proxy,
+    required bool isStarted,
+    required CoreStatus coreStatus,
+    required IpInfo? ipInfo,
+    required List<Rule> rules,
+  }) async {
+    final report = await globalState.safeRun<String>(() async {
+      final device = await _loomDeviceInfo();
+      final connections = await Connectivity().checkConnectivity();
+      final network = connections
+          .where((item) => item != ConnectivityResult.none)
+          .map((item) => item.name)
+          .join(', ');
+      return buildLoomDiagnosticReport(
+        appVersion: globalState.packageInfo.version,
+        systemName: device.system,
+        deviceName: device.device,
+        network: network.isEmpty ? 'unknown' : network,
+        publicIp: ipInfo?.ip ?? 'unknown',
+        countryCode: ipInfo?.countryCode ?? '',
+        vpnState: isStarted ? 'connected' : 'disconnected',
+        coreState: coreStatus.name,
+        profileUrl: profile?.url ?? '',
+        server: proxy?.name ?? 'unknown',
+        protocol: proxy?.type ?? 'unknown',
+        adblockEnabled: rules.any(isLoomAdblockRule),
+        directRoutes: rules.where(isLoomDirectRule).length,
+      );
+    }, title: 'Диагностика');
+    if (report == null || !context.mounted) return;
+
+    final confirmed = await globalState.showMessage(
+      title: 'Скопировать диагностику?',
+      message: TextSpan(
+        text:
+            'В отчёт войдут модель устройства, версия ОС, тип сети, публичный IP и состояние VPN. Ссылка подписки, ключи, содержимое трафика и логи не включаются.\n\n$report',
+      ),
+      confirmText: 'СКОПИРОВАТЬ',
+    );
+    if (confirmed != true) return;
+    await Clipboard.setData(ClipboardData(text: report));
+    globalState.showNotifier(
+      'Диагностика скопирована. Отправьте её в чат поддержки.',
+    );
+  }
+
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final profile = ref.watch(currentProfileProvider);
+    final group = _watchLoomGroup(ref);
+    final proxy = _watchSelectedProxy(ref, group);
+    final isStarted = ref.watch(isStartProvider);
+    final coreStatus = ref.watch(coreStatusProvider);
+    final ipInfo = ref.watch(
+      networkDetectionProvider.select((state) => state.ipInfo),
+    );
+    final rules = profile == null
+        ? const <Rule>[]
+        : ref.watch(profileAddedRulesProvider(profile.id)).value ?? const [];
     return LoomDetailPage(
       title: 'Поддержка',
       child: ListView(
@@ -928,8 +1047,24 @@ class LoomSupportView extends StatelessWidget {
           ),
           const SizedBox(height: 10),
           LoomLinkCard(
+            icon: Icons.troubleshoot_outlined,
+            title: 'Подготовить диагностику',
+            subtitle: 'Версия, устройство, сеть и состояние VPN',
+            onTap: () => _copyDiagnostics(
+              context,
+              ref,
+              profile: profile,
+              proxy: proxy,
+              isStarted: isStarted,
+              coreStatus: coreStatus,
+              ipInfo: ipInfo,
+              rules: rules,
+            ),
+          ),
+          const SizedBox(height: 10),
+          LoomLinkCard(
             icon: Icons.mail_outline,
-            title: 'Написать в поддержку',
+            title: 'Открыть чат поддержки',
             subtitle: '@l00mvpnsupport',
             onTap: () => globalState.openUrl(loomSupportUrl),
           ),

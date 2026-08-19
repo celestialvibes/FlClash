@@ -3,6 +3,30 @@ import 'package:fl_clash/views/loom.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
+  test('LOOM diagnostics expose no subscription secret', () {
+    const secret = 'https://loomhost.ru/sub/very-secret-token';
+    final report = buildLoomDiagnosticReport(
+      appVersion: '1.0.0',
+      systemName: 'macOS 15.6',
+      deviceName: 'MacBook Pro',
+      network: 'wifi',
+      publicIp: '203.0.113.1',
+      countryCode: 'RU',
+      vpnState: 'connected',
+      coreState: 'connected',
+      profileUrl: secret,
+      server: 'Frankfurt',
+      protocol: 'vless',
+      adblockEnabled: true,
+      directRoutes: 2,
+    );
+
+    expect(report, contains('Support ID:'));
+    expect(report, contains('Network: wifi'));
+    expect(report, isNot(contains(secret)));
+    expect(report, isNot(contains('very-secret-token')));
+  });
+
   test('LOOM adblock is one GEOSITE reject rule', () {
     final rule = createLoomAdblockRule();
 
