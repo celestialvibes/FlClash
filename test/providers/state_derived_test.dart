@@ -1,5 +1,6 @@
 import 'package:fl_clash/common/constant.dart';
 import 'package:fl_clash/enum/enum.dart';
+import 'package:fl_clash/l10n/l10n.dart';
 import 'package:fl_clash/models/models.dart';
 import 'package:fl_clash/providers/app.dart';
 import 'package:fl_clash/providers/config.dart';
@@ -11,6 +12,8 @@ import 'package:riverpod/riverpod.dart';
 
 void main() {
   late ProviderContainer container;
+
+  setUpAll(() => AppLocalizations.load(const Locale('en')));
 
   setUp(() {
     container = ProviderContainer(
