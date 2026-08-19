@@ -571,12 +571,12 @@ SharedState sharedState(Ref ref) {
     vpnOptions: VpnOptions(
       enable: vpnSetting.enable,
       stack: stack,
-      systemProxy: vpnSetting.systemProxy,
+      systemProxy: false,
       port: port,
       ipv6: vpnSetting.ipv6,
       dnsHijacking: vpnSetting.dnsHijacking,
       accessControlProps: vpnSetting.accessControlProps,
-      allowBypass: vpnSetting.allowBypass,
+      allowBypass: false,
       bypassDomain: bypassDomain,
     ),
   );

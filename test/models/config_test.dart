@@ -185,9 +185,9 @@ void main() {
     test('default values', () {
       const props = VpnProps();
       expect(props.enable, true);
-      expect(props.systemProxy, true);
+      expect(props.systemProxy, false);
       expect(props.ipv6, false);
-      expect(props.allowBypass, true);
+      expect(props.allowBypass, false);
       expect(props.dnsHijacking, false);
       expect(props.accessControlProps.enable, false);
     });
