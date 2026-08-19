@@ -64,3 +64,9 @@ printf '%s\n' "stale content" > "$actual"
   bash "$generator" "" "$actual"
 )
 grep -q -- "- Initial release" "$actual"
+
+template="$script_dir/../release_template.md"
+workflow="$script_dir/../workflows/build.yaml"
+grep -q 'celestialvibes/FlClash' "$template"
+grep -q 'LOOM-VERSION-macos-arm64.dmg' "$template"
+! grep -Eqi 'chen08209|telegram|homebrew|fdroid' "$template" "$workflow"
