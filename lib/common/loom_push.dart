@@ -51,9 +51,9 @@ FirebaseOptions? createLoomFirebaseOptions({
 }
 
 LoomPushRoute? parseLoomPushRoute(Map<String, dynamic> data) =>
-    switch (data['route']) {
+    switch (data['cta'] ?? data['route']) {
       'support' => LoomPushRoute.support,
-      'subscription' => LoomPushRoute.subscription,
+      'plans' || 'subscription' => LoomPushRoute.subscription,
       _ => null,
     };
 

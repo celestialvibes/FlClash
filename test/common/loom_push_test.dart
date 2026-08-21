@@ -36,7 +36,8 @@ void main() {
   });
 
   test('push routes accept only internal allowlisted destinations', () {
-    expect(parseLoomPushRoute({'route': 'support'}), LoomPushRoute.support);
+    expect(parseLoomPushRoute({'cta': 'support'}), LoomPushRoute.support);
+    expect(parseLoomPushRoute({'cta': 'plans'}), LoomPushRoute.subscription);
     expect(parseLoomPushRoute({'route': 'https://evil.example'}), isNull);
   });
 

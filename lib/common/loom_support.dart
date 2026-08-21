@@ -5,6 +5,7 @@ import 'package:dio/dio.dart';
 import 'package:dio/io.dart';
 import 'package:flutter/foundation.dart';
 
+import 'loom_device_credential.dart';
 import 'preferences.dart';
 import 'utils.dart';
 
@@ -454,9 +455,21 @@ class LoomSupportClient {
   }
 
   Future<LoomSupportCredential> _bootstrap() async {
+    String? deviceCredential;
+    if (Platform.isAndroid) {
+      try {
+        deviceCredential = await loomDeviceCredentials.current();
+      } catch (_) {
+        deviceCredential = null;
+      }
+    }
     final response = await _dio.post<Object?>(
       loomSupportApiUri.resolve('$_supportPath/bootstrap').toString(),
-      data: {'platform': platform, 'app_version': appVersion},
+      data: {
+        'platform': platform,
+        'app_version': appVersion,
+        'device_credential': ?deviceCredential,
+      },
       options: Options(
         sendTimeout: const Duration(seconds: 10),
         receiveTimeout: const Duration(seconds: 10),
