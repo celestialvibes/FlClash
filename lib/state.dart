@@ -331,6 +331,16 @@ class GlobalState {
     if (!_didCrashOnPreviousExecution) {
       await container.read(setupActionProvider.notifier).initStatus();
     }
+    await loomExpiryNotifications.initialize();
+    container.listen<int?>(
+      currentProfileProvider.select(
+        (profile) => profile?.subscriptionInfo?.expire,
+      ),
+      (_, expiresAt) {
+        unawaited(loomExpiryNotifications.sync(expiresAt));
+      },
+      fireImmediately: true,
+    );
     container.read(initProvider.notifier).value = true;
     permissions.check();
   }

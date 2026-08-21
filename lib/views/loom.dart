@@ -1311,6 +1311,26 @@ class LoomSettingsView extends ConsumerWidget {
                 ),
                 const Divider(height: 1),
                 ValueListenableBuilder<bool>(
+                  valueListenable: loomExpiryNotifications,
+                  builder: (context, enabled, child) => LoomSwitchRow(
+                    label: 'Напоминания',
+                    caption: 'За 3 дня и за сутки до окончания подписки',
+                    value: enabled,
+                    onChanged: (value) async {
+                      final changed = await loomExpiryNotifications.setEnabled(
+                        value,
+                        profile?.subscriptionInfo?.expire,
+                      );
+                      if (!changed && context.mounted) {
+                        globalState.showNotifier(
+                          'Разрешите уведомления для LOOM в настройках системы.',
+                        );
+                      }
+                    },
+                  ),
+                ),
+                const Divider(height: 1),
+                ValueListenableBuilder<bool>(
                   valueListenable: loomSupportInbox,
                   builder: (context, unread, child) => LoomSettingsRow(
                     label: 'Поддержка',

@@ -19,6 +19,7 @@ export 'keyboard.dart';
 export 'launch.dart';
 export 'link.dart';
 export 'lock.dart';
+export 'loom_notifications.dart';
 export 'measure.dart';
 export 'mixin.dart';
 export 'navigation.dart';
