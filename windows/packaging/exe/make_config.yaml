@@ -1,11 +1,11 @@
 script_template: inno_setup.iss
-app_id: 728B3532-C74B-4870-9068-BE70FE12A3E6
-app_name: FlClash
-publisher: chen08209
-publisher_url: https://github.com/chen08209/FlClash
-display_name: FlClash
-executable_name: FlClash.exe
-output_base_file_name: FlClash.exe
+app_id: 473702EA-6B91-47EE-AF3E-0AB23EAC33F1
+app_name: LOOM
+publisher: LOOM
+publisher_url: https://loomvpn.pro
+display_name: LOOM
+executable_name: LOOM.exe
+output_base_file_name: LOOM
 setup_icon_file: ..\windows\runner\resources\app_icon.ico
 locales:
   - lang: zh
