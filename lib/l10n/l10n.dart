@@ -774,10 +774,10 @@ class AppLocalizations {
     );
   }
 
-  /// `Simple VPN client for Loomhost subscriptions.`
+  /// `A multi-platform proxy client based on ClashMeta, simple and easy to use, open-source and ad-free.`
   String get desc {
     return Intl.message(
-      'Simple VPN client for Loomhost subscriptions.',
+      'A multi-platform proxy client based on ClashMeta, simple and easy to use, open-source and ad-free.',
       name: 'desc',
       desc: '',
       args: [],
@@ -3484,10 +3484,10 @@ class AppLocalizations {
     );
   }
 
-  /// `Helper service unavailable; TUN mode cannot be enabled. Reinstall LOOM to restore it.`
+  /// `Helper service unavailable; TUN mode cannot be enabled. Reinstall FlClash to restore it.`
   String get helperCorruptTip {
     return Intl.message(
-      'Helper service unavailable; TUN mode cannot be enabled. Reinstall LOOM to restore it.',
+      'Helper service unavailable; TUN mode cannot be enabled. Reinstall FlClash to restore it.',
       name: 'helperCorruptTip',
       desc: '',
       args: [],
@@ -4526,6 +4526,186 @@ class AppLocalizations {
       name: 'entriesCount',
       desc: '',
       args: [count],
+    );
+  }
+
+  /// `Private network.\nOn your side.`
+  String get loomHelloTitle {
+    return Intl.message(
+      'Private network.\nOn your side.',
+      name: 'loomHelloTitle',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `One clear path from subscription to a protected connection.`
+  String get loomHelloSubtitle {
+    return Intl.message(
+      'One clear path from subscription to a protected connection.',
+      name: 'loomHelloSubtitle',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `GET A SUBSCRIPTION`
+  String get loomGetSubscription {
+    return Intl.message(
+      'GET A SUBSCRIPTION',
+      name: 'loomGetSubscription',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `SIGN IN WITH EMAIL`
+  String get loomLoginByEmail {
+    return Intl.message(
+      'SIGN IN WITH EMAIL',
+      name: 'loomLoginByEmail',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Enter subscription manually`
+  String get loomManualSubscription {
+    return Intl.message(
+      'Enter subscription manually',
+      name: 'loomManualSubscription',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Need help?`
+  String get loomNeedHelp {
+    return Intl.message('Need help?', name: 'loomNeedHelp', desc: '', args: []);
+  }
+
+  /// `Sign in to LOOM`
+  String get loomEmailTitle {
+    return Intl.message(
+      'Sign in to LOOM',
+      name: 'loomEmailTitle',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Email`
+  String get loomEmailLabel {
+    return Intl.message('Email', name: 'loomEmailLabel', desc: '', args: []);
+  }
+
+  /// `Enter a valid email`
+  String get loomEmailInvalid {
+    return Intl.message(
+      'Enter a valid email',
+      name: 'loomEmailInvalid',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Code from email`
+  String get loomCodeTitle {
+    return Intl.message(
+      'Code from email',
+      name: 'loomCodeTitle',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `6-digit code`
+  String get loomCodeLabel {
+    return Intl.message(
+      '6-digit code',
+      name: 'loomCodeLabel',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Enter the 6-digit code`
+  String get loomCodeInvalid {
+    return Intl.message(
+      'Enter the 6-digit code',
+      name: 'loomCodeInvalid',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Could not sign in`
+  String get loomAuthErrorTitle {
+    return Intl.message(
+      'Could not sign in',
+      name: 'loomAuthErrorTitle',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `The code is incorrect. Try again.`
+  String get loomAuthInvalidCode {
+    return Intl.message(
+      'The code is incorrect. Try again.',
+      name: 'loomAuthInvalidCode',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `The code has expired. Request a new one.`
+  String get loomAuthExpiredCode {
+    return Intl.message(
+      'The code has expired. Request a new one.',
+      name: 'loomAuthExpiredCode',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Too many attempts. Please try again later.`
+  String get loomAuthRateLimited {
+    return Intl.message(
+      'Too many attempts. Please try again later.',
+      name: 'loomAuthRateLimited',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `No active LOOM subscription was found for this email.`
+  String get loomAuthSubscriptionMissing {
+    return Intl.message(
+      'No active LOOM subscription was found for this email.',
+      name: 'loomAuthSubscriptionMissing',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `The device limit has been reached. Remove an old device on loomvpn.pro and try again.`
+  String get loomAuthDeviceLimit {
+    return Intl.message(
+      'The device limit has been reached. Remove an old device on loomvpn.pro and try again.',
+      name: 'loomAuthDeviceLimit',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `LOOM returned an unexpected response. Please try again later.`
+  String get loomAuthInvalidResponse {
+    return Intl.message(
+      'LOOM returned an unexpected response. Please try again later.',
+      name: 'loomAuthInvalidResponse',
+      desc: '',
+      args: [],
     );
   }
 }

@@ -311,7 +311,7 @@ class MessageLookup extends MessageLookupByLibrary {
     "deleteMultipTip": m1,
     "deleteTip": m2,
     "desc": MessageLookupByLibrary.simpleMessage(
-      "Simple VPN client for Loomhost subscriptions.",
+      "A multi-platform proxy client based on ClashMeta, simple and easy to use, open-source and ad-free.",
     ),
     "destination": MessageLookupByLibrary.simpleMessage("Destination"),
     "destinationGeoIP": MessageLookupByLibrary.simpleMessage(
@@ -440,7 +440,7 @@ class MessageLookup extends MessageLookupByLibrary {
       "Do you want to cache the changes?",
     ),
     "helperCorruptTip": MessageLookupByLibrary.simpleMessage(
-      "Helper service unavailable; TUN mode cannot be enabled. Reinstall LOOM to restore it.",
+      "Helper service unavailable; TUN mode cannot be enabled. Reinstall FlClash to restore it.",
     ),
     "hideFromList": MessageLookupByLibrary.simpleMessage("Hide from list"),
     "host": MessageLookupByLibrary.simpleMessage("Host"),
@@ -550,6 +550,53 @@ class MessageLookup extends MessageLookupByLibrary {
     "logs": MessageLookupByLibrary.simpleMessage("Logs"),
     "logsDesc": MessageLookupByLibrary.simpleMessage("Log capture records"),
     "logsTest": MessageLookupByLibrary.simpleMessage("Logs test"),
+    "loomAuthDeviceLimit": MessageLookupByLibrary.simpleMessage(
+      "The device limit has been reached. Remove an old device on loomvpn.pro and try again.",
+    ),
+    "loomAuthErrorTitle": MessageLookupByLibrary.simpleMessage(
+      "Could not sign in",
+    ),
+    "loomAuthExpiredCode": MessageLookupByLibrary.simpleMessage(
+      "The code has expired. Request a new one.",
+    ),
+    "loomAuthInvalidCode": MessageLookupByLibrary.simpleMessage(
+      "The code is incorrect. Try again.",
+    ),
+    "loomAuthInvalidResponse": MessageLookupByLibrary.simpleMessage(
+      "LOOM returned an unexpected response. Please try again later.",
+    ),
+    "loomAuthRateLimited": MessageLookupByLibrary.simpleMessage(
+      "Too many attempts. Please try again later.",
+    ),
+    "loomAuthSubscriptionMissing": MessageLookupByLibrary.simpleMessage(
+      "No active LOOM subscription was found for this email.",
+    ),
+    "loomCodeInvalid": MessageLookupByLibrary.simpleMessage(
+      "Enter the 6-digit code",
+    ),
+    "loomCodeLabel": MessageLookupByLibrary.simpleMessage("6-digit code"),
+    "loomCodeTitle": MessageLookupByLibrary.simpleMessage("Code from email"),
+    "loomEmailInvalid": MessageLookupByLibrary.simpleMessage(
+      "Enter a valid email",
+    ),
+    "loomEmailLabel": MessageLookupByLibrary.simpleMessage("Email"),
+    "loomEmailTitle": MessageLookupByLibrary.simpleMessage("Sign in to LOOM"),
+    "loomGetSubscription": MessageLookupByLibrary.simpleMessage(
+      "GET A SUBSCRIPTION",
+    ),
+    "loomHelloSubtitle": MessageLookupByLibrary.simpleMessage(
+      "One clear path from subscription to a protected connection.",
+    ),
+    "loomHelloTitle": MessageLookupByLibrary.simpleMessage(
+      "Private network.\nOn your side.",
+    ),
+    "loomLoginByEmail": MessageLookupByLibrary.simpleMessage(
+      "SIGN IN WITH EMAIL",
+    ),
+    "loomManualSubscription": MessageLookupByLibrary.simpleMessage(
+      "Enter subscription manually",
+    ),
+    "loomNeedHelp": MessageLookupByLibrary.simpleMessage("Need help?"),
     "loopback": MessageLookupByLibrary.simpleMessage("Loopback unlock tool"),
     "loopbackDesc": MessageLookupByLibrary.simpleMessage(
       "Used for UWP loopback unlocking",

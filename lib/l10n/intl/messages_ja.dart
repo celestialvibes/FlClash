@@ -247,7 +247,7 @@ class MessageLookup extends MessageLookupByLibrary {
     "deleteMultipTip": m1,
     "deleteTip": m2,
     "desc": MessageLookupByLibrary.simpleMessage(
-      "Loomhost サブスクリプション用のシンプルな VPN クライアント。",
+      "ClashMetaベースのマルチプラットフォームプロキシクライアント。シンプルで使いやすく、オープンソースで広告なし。",
     ),
     "destination": MessageLookupByLibrary.simpleMessage("宛先"),
     "destinationGeoIP": MessageLookupByLibrary.simpleMessage("宛先地理情報"),
@@ -434,6 +434,45 @@ class MessageLookup extends MessageLookupByLibrary {
     "logs": MessageLookupByLibrary.simpleMessage("ログ"),
     "logsDesc": MessageLookupByLibrary.simpleMessage("ログキャプチャ記録"),
     "logsTest": MessageLookupByLibrary.simpleMessage("ログテスト"),
+    "loomAuthDeviceLimit": MessageLookupByLibrary.simpleMessage(
+      "デバイス数の上限に達しました。loomvpn.proで古いデバイスを削除してから、もう一度お試しください。",
+    ),
+    "loomAuthErrorTitle": MessageLookupByLibrary.simpleMessage("ログインできませんでした"),
+    "loomAuthExpiredCode": MessageLookupByLibrary.simpleMessage(
+      "コードの有効期限が切れました。新しいコードを取得してください。",
+    ),
+    "loomAuthInvalidCode": MessageLookupByLibrary.simpleMessage(
+      "コードが正しくありません。もう一度お試しください。",
+    ),
+    "loomAuthInvalidResponse": MessageLookupByLibrary.simpleMessage(
+      "LOOMから予期しない応答が返されました。しばらくしてからお試しください。",
+    ),
+    "loomAuthRateLimited": MessageLookupByLibrary.simpleMessage(
+      "試行回数が多すぎます。しばらくしてからお試しください。",
+    ),
+    "loomAuthSubscriptionMissing": MessageLookupByLibrary.simpleMessage(
+      "このメールアドレスに有効なLOOMサブスクリプションがありません。",
+    ),
+    "loomCodeInvalid": MessageLookupByLibrary.simpleMessage("6桁のコードを入力してください"),
+    "loomCodeLabel": MessageLookupByLibrary.simpleMessage("6桁のコード"),
+    "loomCodeTitle": MessageLookupByLibrary.simpleMessage("メールの確認コード"),
+    "loomEmailInvalid": MessageLookupByLibrary.simpleMessage(
+      "有効なメールアドレスを入力してください",
+    ),
+    "loomEmailLabel": MessageLookupByLibrary.simpleMessage("メールアドレス"),
+    "loomEmailTitle": MessageLookupByLibrary.simpleMessage("LOOMにログイン"),
+    "loomGetSubscription": MessageLookupByLibrary.simpleMessage("サブスクリプションを取得"),
+    "loomHelloSubtitle": MessageLookupByLibrary.simpleMessage(
+      "サブスクリプションから安全な接続まで、わかりやすく案内します。",
+    ),
+    "loomHelloTitle": MessageLookupByLibrary.simpleMessage(
+      "プライベートネットワーク。\nあなたの味方です。",
+    ),
+    "loomLoginByEmail": MessageLookupByLibrary.simpleMessage("メールでログイン"),
+    "loomManualSubscription": MessageLookupByLibrary.simpleMessage(
+      "サブスクリプションを手動入力",
+    ),
+    "loomNeedHelp": MessageLookupByLibrary.simpleMessage("お困りですか？"),
     "loopback": MessageLookupByLibrary.simpleMessage("ループバック解除ツール"),
     "loopbackDesc": MessageLookupByLibrary.simpleMessage("UWPループバック解除用"),
     "loose": MessageLookupByLibrary.simpleMessage("疎"),

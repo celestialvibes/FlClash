@@ -6,6 +6,7 @@ import 'dart:io';
 import 'package:collection/collection.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:fl_clash/common/common.dart';
+import 'package:fl_clash/common/loom_auth.dart';
 import 'package:fl_clash/common/loom_diagnostics.dart';
 import 'package:fl_clash/common/loom_support.dart';
 import 'package:fl_clash/core/controller.dart';
@@ -270,6 +271,25 @@ Proxy? _watchSelectedProxy(WidgetRef ref, Group? group) {
       group.all.firstOrNull;
 }
 
+Future<bool> _installLoomSubscription(BuildContext context, String url) async {
+  while (true) {
+    final imported = await globalState.container
+        .read(profilesActionProvider.notifier)
+        .addProfileFormURL(url, showError: false);
+    if (imported) return true;
+    if (!context.mounted) return false;
+    final retry = await globalState.showMessage(
+      title: 'Не удалось добавить подписку',
+      message: const TextSpan(
+        text:
+            'Проверьте интернет и ссылку. Если подписка истекла, получите новую на loomvpn.pro.',
+      ),
+      confirmText: 'Попробовать снова',
+    );
+    if (retry != true) return false;
+  }
+}
+
 Future<void> _importSubscription(BuildContext context) async {
   final urlLabel = context.appLocalizations.url;
   var value = '';
@@ -292,19 +312,108 @@ Future<void> _importSubscription(BuildContext context) async {
     );
     if (url == null) return;
     value = url;
-    final imported = await globalState.container
-        .read(profilesActionProvider.notifier)
-        .addProfileFormURL(url, showError: false);
-    if (imported) return;
-    final retry = await globalState.showMessage(
-      title: 'Не удалось добавить подписку',
-      message: const TextSpan(
-        text:
-            'Проверьте интернет и ссылку. Если подписка истекла, получите новую в боте.',
+    if (!context.mounted) return;
+    if (await _installLoomSubscription(context, url)) return;
+  }
+}
+
+bool _isValidLoomEmail(String value) {
+  final email = value.trim();
+  return email.length <= 254 &&
+      RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$').hasMatch(email);
+}
+
+String _loomAuthError(BuildContext context, LoomAuthFailure failure) {
+  final localizations = context.appLocalizations;
+  return switch (failure) {
+    LoomAuthFailure.invalidCode => localizations.loomAuthInvalidCode,
+    LoomAuthFailure.expiredCode => localizations.loomAuthExpiredCode,
+    LoomAuthFailure.rateLimited => localizations.loomAuthRateLimited,
+    LoomAuthFailure.subscriptionMissing =>
+      localizations.loomAuthSubscriptionMissing,
+    LoomAuthFailure.deviceLimit => localizations.loomAuthDeviceLimit,
+    LoomAuthFailure.network => localizations.networkException,
+    LoomAuthFailure.invalidResponse => localizations.loomAuthInvalidResponse,
+  };
+}
+
+Future<void> _showLoomAuthError(
+  BuildContext context,
+  LoomAuthException error,
+) async {
+  if (!context.mounted) return;
+  final localizations = context.appLocalizations;
+  await globalState.showMessage(
+    context: context,
+    title: localizations.loomAuthErrorTitle,
+    message: TextSpan(text: _loomAuthError(context, error.failure)),
+  );
+}
+
+Future<void> _activateLoomSubscription(BuildContext context) async {
+  final localizations = context.appLocalizations;
+  final email = await globalState.showCommonDialog<String>(
+    context: context,
+    child: InputDialog(
+      title: localizations.loomEmailTitle,
+      labelText: localizations.loomEmailLabel,
+      value: '',
+      maxLength: 254,
+      keyboardType: TextInputType.emailAddress,
+      inputFormatters: TextInputLimits.limit(254),
+      validator: (value) => _isValidLoomEmail(value ?? '')
+          ? null
+          : localizations.loomEmailInvalid,
+    ),
+  );
+  if (email == null || !context.mounted) return;
+
+  final client = LoomAuthClient(
+    platform: Platform.operatingSystem,
+    appVersion: globalState.packageInfo.version,
+    appBuild: globalState.packageInfo.buildNumber,
+  );
+  final LoomLoginChallenge challenge;
+  try {
+    challenge = await client.requestCode(email);
+  } on LoomAuthException catch (error) {
+    if (!context.mounted) return;
+    await _showLoomAuthError(context, error);
+    return;
+  }
+
+  while (true) {
+    if (!context.mounted) return;
+    final code = await globalState.showCommonDialog<String>(
+      context: context,
+      child: InputDialog(
+        title: localizations.loomCodeTitle,
+        labelText: localizations.loomCodeLabel,
+        value: '',
+        maxLength: 6,
+        keyboardType: TextInputType.number,
+        inputFormatters: TextInputLimits.digitsOnly(6),
+        validator: (value) => RegExp(r'^\d{6}$').hasMatch(value ?? '')
+            ? null
+            : localizations.loomCodeInvalid,
       ),
-      confirmText: 'Попробовать снова',
     );
-    if (retry != true) return;
+    if (code == null || !context.mounted) return;
+
+    try {
+      final activation = await client.activate(
+        challenge: challenge,
+        code: code,
+        installationId: await loomInstallationId(),
+      );
+      if (!context.mounted) return;
+      await _installLoomSubscription(context, activation.subscriptionUrl);
+      return;
+    } on LoomAuthException catch (error) {
+      if (!context.mounted) return;
+      await _showLoomAuthError(context, error);
+      if (error.failure != LoomAuthFailure.invalidCode) return;
+    }
   }
 }
 
@@ -400,11 +509,29 @@ Future<void> _setAdblock(
   });
 }
 
-class LoomHelloView extends StatelessWidget {
+class LoomHelloView extends StatefulWidget {
   const LoomHelloView({super.key});
 
   @override
+  State<LoomHelloView> createState() => _LoomHelloViewState();
+}
+
+class _LoomHelloViewState extends State<LoomHelloView> {
+  bool _activating = false;
+
+  Future<void> _activate() async {
+    if (_activating) return;
+    setState(() => _activating = true);
+    try {
+      await _activateLoomSubscription(context);
+    } finally {
+      if (mounted) setState(() => _activating = false);
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final localizations = context.appLocalizations;
     return LoomPage(
       child: Center(
         child: SingleChildScrollView(
@@ -418,9 +545,9 @@ class LoomHelloView extends StatelessWidget {
                   child: LoomWordmark(),
                 ),
                 const SizedBox(height: 42),
-                const Text(
-                  'Личная сеть.\nНа вашей стороне.',
-                  style: TextStyle(
+                Text(
+                  localizations.loomHelloTitle,
+                  style: const TextStyle(
                     color: loomInk,
                     fontSize: 42,
                     height: 0.94,
@@ -429,31 +556,40 @@ class LoomHelloView extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(height: 18),
-                const Text(
-                  'Один понятный маршрут от подписки до защищённого подключения.',
-                  style: TextStyle(color: loomMuted, fontSize: 14, height: 1.4),
+                Text(
+                  localizations.loomHelloSubtitle,
+                  style: const TextStyle(
+                    color: loomMuted,
+                    fontSize: 14,
+                    height: 1.4,
+                  ),
                 ),
                 const SizedBox(height: 34),
                 LoomPrimaryButton(
-                  label: 'ПОЛУЧИТЬ ПОДПИСКУ',
+                  label: localizations.loomGetSubscription,
                   icon: Icons.open_in_new,
                   onPressed: () => globalState.openUrl(loomSubscriptionUrl),
                 ),
                 const SizedBox(height: 10),
                 LoomPrimaryButton(
-                  label: 'ЕСТЬ ПОДПИСКА?',
+                  label: localizations.loomLoginByEmail,
                   outlined: true,
-                  icon: Icons.add_link,
-                  onPressed: () => _importSubscription(context),
+                  icon: Icons.alternate_email,
+                  onPressed: _activating ? null : _activate,
                 ),
-                const SizedBox(height: 12),
+                TextButton(
+                  onPressed: _activating
+                      ? null
+                      : () => _importSubscription(context),
+                  child: Text(localizations.loomManualSubscription),
+                ),
                 TextButton.icon(
                   onPressed: () =>
                       BaseNavigator.push(context, const LoomSupportView()),
                   icon: const LoomSupportUnreadBadge(
                     child: Icon(Icons.support_agent_outlined, size: 18),
                   ),
-                  label: const Text('Нужна помощь?'),
+                  label: Text(localizations.loomNeedHelp),
                 ),
               ],
             ),
@@ -492,153 +628,154 @@ class LoomHomeView extends ConsumerWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-            Row(
-              children: [
-                const LoomWordmark(),
-                const Spacer(),
-                IconButton(
-                  tooltip: 'Настройки',
-                  onPressed: () {
-                    BaseNavigator.push(context, const LoomSettingsView());
-                  },
-                  icon: const LoomSupportUnreadBadge(
-                    child: Icon(Icons.settings_outlined),
-                  ),
-                ),
-              ],
-            ),
-            SizedBox(height: compact ? 10 : 18),
-            LoomStatus(isStarted: isStarted),
-            SizedBox(height: compact ? 10 : 20),
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.center,
-              children: [
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        isStarted
-                            ? 'Соединение\nзащищено'
-                            : 'Готово к\nподключению',
-                        style: const TextStyle(
-                          color: loomInk,
-                          fontSize: 32,
-                          height: 0.94,
-                          fontWeight: FontWeight.w500,
-                          letterSpacing: -1.8,
-                        ).copyWith(fontSize: compact ? 28 : 32),
+                Row(
+                  children: [
+                    const LoomWordmark(),
+                    const Spacer(),
+                    IconButton(
+                      tooltip: 'Настройки',
+                      onPressed: () {
+                        BaseNavigator.push(context, const LoomSettingsView());
+                      },
+                      icon: const LoomSupportUnreadBadge(
+                        child: Icon(Icons.settings_outlined),
                       ),
-                      SizedBox(height: compact ? 7 : 12),
-                      Text(
-                        isStarted
-                            ? 'Трафик зашифрован. Можно пользоваться интернетом.'
-                            : 'Ваши данные сейчас передаются напрямую.',
-                        style: const TextStyle(
-                          color: loomMuted,
-                          fontSize: 12,
-                          height: 1.35,
+                    ),
+                  ],
+                ),
+                SizedBox(height: compact ? 10 : 18),
+                LoomStatus(isStarted: isStarted),
+                SizedBox(height: compact ? 10 : 20),
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            isStarted
+                                ? 'Соединение\nзащищено'
+                                : 'Готово к\nподключению',
+                            style: const TextStyle(
+                              color: loomInk,
+                              fontSize: 32,
+                              height: 0.94,
+                              fontWeight: FontWeight.w500,
+                              letterSpacing: -1.8,
+                            ).copyWith(fontSize: compact ? 28 : 32),
+                          ),
+                          SizedBox(height: compact ? 7 : 12),
+                          Text(
+                            isStarted
+                                ? 'Трафик зашифрован. Можно пользоваться интернетом.'
+                                : 'Ваши данные сейчас передаются напрямую.',
+                            style: const TextStyle(
+                              color: loomMuted,
+                              fontSize: 12,
+                              height: 1.35,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(width: 18),
+                    LoomPowerButton(
+                      compact: compact,
+                      enabled: true,
+                      isStarted: isStarted,
+                      onPressed: () => ref
+                          .read(commonActionProvider.notifier)
+                          .toggleRunning(),
+                    ),
+                  ],
+                ),
+                SizedBox(height: compact ? 14 : 28),
+                LoomCard(
+                  padding: EdgeInsets.all(compact ? 12 : 16),
+                  onTap: () => _toServers(ref),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const LoomEyebrow('СЕРВЕР'),
+                            const SizedBox(height: 8),
+                            EmojiText(
+                              proxy?.name ?? 'Выберите сервер',
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(
+                                color: loomInk,
+                                fontSize: 16,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                            const SizedBox(height: 5),
+                            Text(
+                              group?.name ?? 'LOOM',
+                              style: const TextStyle(
+                                color: loomMuted,
+                                fontSize: 11,
+                              ),
+                            ),
+                          ],
                         ),
                       ),
-                    ],
-                  ),
-                ),
-                const SizedBox(width: 18),
-                LoomPowerButton(
-                  compact: compact,
-                  enabled: true,
-                  isStarted: isStarted,
-                  onPressed: () =>
-                      ref.read(commonActionProvider.notifier).toggleRunning(),
-                ),
-              ],
-            ),
-            SizedBox(height: compact ? 14 : 28),
-            LoomCard(
-              padding: EdgeInsets.all(compact ? 12 : 16),
-              onTap: () => _toServers(ref),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const LoomEyebrow('СЕРВЕР'),
-                        const SizedBox(height: 8),
-                        EmojiText(
-                          proxy?.name ?? 'Выберите сервер',
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(
-                            color: loomInk,
-                            fontSize: 16,
+                      if (delay != null && delay > 0)
+                        Text(
+                          '$delay мс',
+                          style: TextStyle(
+                            color: utils.getDelayColor(delay),
+                            fontSize: 12,
                             fontWeight: FontWeight.w700,
                           ),
                         ),
-                        const SizedBox(height: 5),
-                        Text(
-                          group?.name ?? 'LOOM',
-                          style: const TextStyle(
-                            color: loomMuted,
-                            fontSize: 11,
-                          ),
-                        ),
-                      ],
-                    ),
+                      const SizedBox(width: 8),
+                      const Icon(Icons.chevron_right, color: loomInk),
+                    ],
                   ),
-                  if (delay != null && delay > 0)
-                    Text(
-                      '$delay мс',
-                      style: TextStyle(
-                        color: utils.getDelayColor(delay),
-                        fontSize: 12,
-                        fontWeight: FontWeight.w700,
+                ),
+                SizedBox(height: compact ? 8 : 10),
+                Row(
+                  children: [
+                    Expanded(
+                      child: LoomMetricCard(
+                        compact: compact,
+                        label: 'ПРОТОКОЛ',
+                        value: proxy?.type.toUpperCase() ?? '—',
+                        caption: 'Автовыбор',
                       ),
                     ),
-                  const SizedBox(width: 8),
-                  const Icon(Icons.chevron_right, color: loomInk),
-                ],
-              ),
-            ),
-            SizedBox(height: compact ? 8 : 10),
-            Row(
-              children: [
-                Expanded(
-                  child: LoomMetricCard(
-                    compact: compact,
-                    label: 'ПРОТОКОЛ',
-                    value: proxy?.type.toUpperCase() ?? '—',
-                    caption: 'Автовыбор',
-                  ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: LoomMetricCard(
+                        compact: compact,
+                        label: 'ПИНГ',
+                        value: delay != null && delay > 0 ? '$delay мс' : '—',
+                        caption: delay == 0
+                            ? 'Проверяем'
+                            : delay != null && delay < 0
+                            ? 'Нет ответа'
+                            : 'Нажмите сервер',
+                      ),
+                    ),
+                  ],
                 ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: LoomMetricCard(
-                    compact: compact,
-                    label: 'ПИНГ',
-                    value: delay != null && delay > 0 ? '$delay мс' : '—',
-                    caption: delay == 0
-                        ? 'Проверяем'
-                        : delay != null && delay < 0
-                        ? 'Нет ответа'
-                        : 'Нажмите сервер',
-                  ),
+                SizedBox(height: compact ? 8 : 10),
+                if (isStarted)
+                  LoomTrafficCard(compact: compact)
+                else
+                  LoomAdblockCard(profile: profile, compact: compact),
+                SizedBox(height: compact ? 12 : 18),
+                LoomPrimaryButton(
+                  compact: compact,
+                  label: isStarted ? 'ОТКЛЮЧИТЬСЯ' : 'ПОДКЛЮЧИТЬСЯ',
+                  outlined: isStarted,
+                  onPressed: () =>
+                      ref.read(commonActionProvider.notifier).toggleRunning(),
                 ),
-              ],
-            ),
-            SizedBox(height: compact ? 8 : 10),
-            if (isStarted)
-              LoomTrafficCard(compact: compact)
-            else
-              LoomAdblockCard(profile: profile, compact: compact),
-            SizedBox(height: compact ? 12 : 18),
-            LoomPrimaryButton(
-              compact: compact,
-              label: isStarted ? 'ОТКЛЮЧИТЬСЯ' : 'ПОДКЛЮЧИТЬСЯ',
-              outlined: isStarted,
-              onPressed: () =>
-                  ref.read(commonActionProvider.notifier).toggleRunning(),
-            ),
               ],
             ),
           );
@@ -2421,7 +2558,7 @@ class LoomPrimaryButton extends StatelessWidget {
   final IconData? icon;
   final bool outlined;
   final bool compact;
-  final VoidCallback onPressed;
+  final VoidCallback? onPressed;
 
   const LoomPrimaryButton({
     super.key,

@@ -320,7 +320,7 @@ class MessageLookup extends MessageLookupByLibrary {
     "deleteMultipTip": m1,
     "deleteTip": m2,
     "desc": MessageLookupByLibrary.simpleMessage(
-      "Простой VPN-клиент для подписок Loomhost.",
+      "Многоплатформенный прокси-клиент на основе ClashMeta, простой и удобный в использовании, с открытым исходным кодом и без рекламы.",
     ),
     "destination": MessageLookupByLibrary.simpleMessage("Назначение"),
     "destinationGeoIP": MessageLookupByLibrary.simpleMessage(
@@ -457,7 +457,7 @@ class MessageLookup extends MessageLookupByLibrary {
       "Хотите сохранить изменения в кэше?",
     ),
     "helperCorruptTip": MessageLookupByLibrary.simpleMessage(
-      "Служба Helper недоступна, поэтому TUN-режим включить нельзя. Переустановите LOOM.",
+      "Служба Helper недоступна, поэтому TUN-режим включить нельзя. Переустановите FlClash.",
     ),
     "hideFromList": MessageLookupByLibrary.simpleMessage("Скрыть из списка"),
     "host": MessageLookupByLibrary.simpleMessage("Хост"),
@@ -569,6 +569,51 @@ class MessageLookup extends MessageLookupByLibrary {
     "logs": MessageLookupByLibrary.simpleMessage("Логи"),
     "logsDesc": MessageLookupByLibrary.simpleMessage("Записи захвата логов"),
     "logsTest": MessageLookupByLibrary.simpleMessage("Тест журналов"),
+    "loomAuthDeviceLimit": MessageLookupByLibrary.simpleMessage(
+      "Лимит устройств исчерпан. Удалите старое устройство на loomvpn.pro и попробуйте снова.",
+    ),
+    "loomAuthErrorTitle": MessageLookupByLibrary.simpleMessage(
+      "Не удалось войти",
+    ),
+    "loomAuthExpiredCode": MessageLookupByLibrary.simpleMessage(
+      "Срок действия кода истёк. Запросите новый.",
+    ),
+    "loomAuthInvalidCode": MessageLookupByLibrary.simpleMessage(
+      "Неверный код. Попробуйте ещё раз.",
+    ),
+    "loomAuthInvalidResponse": MessageLookupByLibrary.simpleMessage(
+      "LOOM вернул неожиданный ответ. Попробуйте позже.",
+    ),
+    "loomAuthRateLimited": MessageLookupByLibrary.simpleMessage(
+      "Слишком много попыток. Попробуйте позже.",
+    ),
+    "loomAuthSubscriptionMissing": MessageLookupByLibrary.simpleMessage(
+      "Для этой почты не найдена активная подписка LOOM.",
+    ),
+    "loomCodeInvalid": MessageLookupByLibrary.simpleMessage(
+      "Введите код из 6 цифр",
+    ),
+    "loomCodeLabel": MessageLookupByLibrary.simpleMessage("Код из 6 цифр"),
+    "loomCodeTitle": MessageLookupByLibrary.simpleMessage("Код из письма"),
+    "loomEmailInvalid": MessageLookupByLibrary.simpleMessage(
+      "Введите корректную почту",
+    ),
+    "loomEmailLabel": MessageLookupByLibrary.simpleMessage("Электронная почта"),
+    "loomEmailTitle": MessageLookupByLibrary.simpleMessage("Войти в LOOM"),
+    "loomGetSubscription": MessageLookupByLibrary.simpleMessage(
+      "ПОЛУЧИТЬ ПОДПИСКУ",
+    ),
+    "loomHelloSubtitle": MessageLookupByLibrary.simpleMessage(
+      "Один понятный маршрут от подписки до защищённого подключения.",
+    ),
+    "loomHelloTitle": MessageLookupByLibrary.simpleMessage(
+      "Личная сеть.\nНа вашей стороне.",
+    ),
+    "loomLoginByEmail": MessageLookupByLibrary.simpleMessage("ВОЙТИ ПО ПОЧТЕ"),
+    "loomManualSubscription": MessageLookupByLibrary.simpleMessage(
+      "Ввести подписку вручную",
+    ),
+    "loomNeedHelp": MessageLookupByLibrary.simpleMessage("Нужна помощь?"),
     "loopback": MessageLookupByLibrary.simpleMessage(
       "Инструмент разблокировки Loopback",
     ),

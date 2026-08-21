@@ -221,7 +221,7 @@ class MessageLookup extends MessageLookupByLibrary {
     "deleteMultipTip": m1,
     "deleteTip": m2,
     "desc": MessageLookupByLibrary.simpleMessage(
-      "用于 Loomhost 订阅的简洁 VPN 客户端。",
+      "基于ClashMeta的多平台代理客户端，简单易用，开源无广告。",
     ),
     "destination": MessageLookupByLibrary.simpleMessage("目标地址"),
     "destinationGeoIP": MessageLookupByLibrary.simpleMessage("目标地理定位"),
@@ -310,7 +310,7 @@ class MessageLookup extends MessageLookupByLibrary {
     "goToConfigureScript": MessageLookupByLibrary.simpleMessage("前往配置脚本"),
     "hasCacheChange": MessageLookupByLibrary.simpleMessage("是否缓存修改"),
     "helperCorruptTip": MessageLookupByLibrary.simpleMessage(
-      "Helper 服务不可用，无法启用 TUN 模式，请重新安装 LOOM。",
+      "Helper 服务不可用，无法启用 TUN 模式，请重新安装 FlClash。",
     ),
     "hideFromList": MessageLookupByLibrary.simpleMessage("从列表中隐藏"),
     "host": MessageLookupByLibrary.simpleMessage("主机"),
@@ -386,6 +386,37 @@ class MessageLookup extends MessageLookupByLibrary {
     "logs": MessageLookupByLibrary.simpleMessage("日志"),
     "logsDesc": MessageLookupByLibrary.simpleMessage("日志捕获记录"),
     "logsTest": MessageLookupByLibrary.simpleMessage("日志测试"),
+    "loomAuthDeviceLimit": MessageLookupByLibrary.simpleMessage(
+      "已达到设备数量上限。请在 loomvpn.pro 删除旧设备后重试。",
+    ),
+    "loomAuthErrorTitle": MessageLookupByLibrary.simpleMessage("无法登录"),
+    "loomAuthExpiredCode": MessageLookupByLibrary.simpleMessage(
+      "验证码已过期，请重新获取。",
+    ),
+    "loomAuthInvalidCode": MessageLookupByLibrary.simpleMessage("验证码不正确，请重试。"),
+    "loomAuthInvalidResponse": MessageLookupByLibrary.simpleMessage(
+      "LOOM 返回了异常响应，请稍后再试。",
+    ),
+    "loomAuthRateLimited": MessageLookupByLibrary.simpleMessage(
+      "尝试次数过多，请稍后再试。",
+    ),
+    "loomAuthSubscriptionMissing": MessageLookupByLibrary.simpleMessage(
+      "此邮箱没有有效的 LOOM 订阅。",
+    ),
+    "loomCodeInvalid": MessageLookupByLibrary.simpleMessage("请输入 6 位验证码"),
+    "loomCodeLabel": MessageLookupByLibrary.simpleMessage("6 位验证码"),
+    "loomCodeTitle": MessageLookupByLibrary.simpleMessage("邮件验证码"),
+    "loomEmailInvalid": MessageLookupByLibrary.simpleMessage("请输入有效的电子邮箱"),
+    "loomEmailLabel": MessageLookupByLibrary.simpleMessage("电子邮箱"),
+    "loomEmailTitle": MessageLookupByLibrary.simpleMessage("登录 LOOM"),
+    "loomGetSubscription": MessageLookupByLibrary.simpleMessage("获取订阅"),
+    "loomHelloSubtitle": MessageLookupByLibrary.simpleMessage(
+      "从订阅到安全连接，一条清晰简单的路径。",
+    ),
+    "loomHelloTitle": MessageLookupByLibrary.simpleMessage("私人网络。\n始终站在你这边。"),
+    "loomLoginByEmail": MessageLookupByLibrary.simpleMessage("使用邮箱登录"),
+    "loomManualSubscription": MessageLookupByLibrary.simpleMessage("手动输入订阅"),
+    "loomNeedHelp": MessageLookupByLibrary.simpleMessage("需要帮助？"),
     "loopback": MessageLookupByLibrary.simpleMessage("回环解锁工具"),
     "loopbackDesc": MessageLookupByLibrary.simpleMessage("用于UWP回环解锁"),
     "loose": MessageLookupByLibrary.simpleMessage("宽松"),

@@ -40,10 +40,25 @@ void main() {
     expect(find.text('LOOM.'), findsOneWidget);
     expect(find.text('Личная сеть.\nНа вашей стороне.'), findsOneWidget);
     expect(find.text('ПОЛУЧИТЬ ПОДПИСКУ'), findsOneWidget);
-    expect(find.text('ЕСТЬ ПОДПИСКА?'), findsOneWidget);
+    expect(find.text('ВОЙТИ ПО ПОЧТЕ'), findsOneWidget);
+    expect(find.text('Ввести подписку вручную'), findsOneWidget);
     expect(find.text('Нужна помощь?'), findsOneWidget);
 
-    await tester.tap(find.text('ЕСТЬ ПОДПИСКА?'));
+    await tester.tap(find.text('ВОЙТИ ПО ПОЧТЕ'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Войти в LOOM'), findsOneWidget);
+    expect(find.byType(TextField), findsOneWidget);
+
+    await tester.enterText(find.byType(TextField), 'not an email');
+    await tester.tap(find.text('Отправить'));
+    await tester.pump();
+
+    expect(find.text('Введите корректную почту'), findsOneWidget);
+    await tester.tap(find.text('Отмена'));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Ввести подписку вручную'));
     await tester.pumpAndSettle();
 
     expect(find.text('Добавить подписку LOOM'), findsOneWidget);
@@ -53,7 +68,7 @@ void main() {
     await tester.tap(find.byType(TextButton).last);
     await tester.pump();
 
-    expect(find.text('Проверьте ссылку'), findsOneWidget);
+    expect(find.text('Введите ссылку подписки LOOM'), findsOneWidget);
     expect(find.text('not a url'), findsOneWidget);
     expect(tester.takeException(), null);
   });
@@ -72,6 +87,7 @@ class _TestApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
+      locale: const Locale('ru'),
       navigatorKey: globalState.navigatorKey,
       localizationsDelegates: const [
         AppLocalizations.delegate,
