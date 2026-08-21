@@ -484,10 +484,14 @@ class LoomHomeView extends ConsumerWidget {
             delayProvider(proxyName: proxy.name, testUrl: group?.testUrl),
           );
     return LoomPage(
-      child: SingleChildScrollView(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final compact =
+              constraints.maxHeight < 680 || constraints.maxWidth < 440;
+          return SingleChildScrollView(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
             Row(
               children: [
                 const LoomWordmark(),
@@ -503,9 +507,9 @@ class LoomHomeView extends ConsumerWidget {
                 ),
               ],
             ),
-            const SizedBox(height: 18),
+            SizedBox(height: compact ? 10 : 18),
             LoomStatus(isStarted: isStarted),
-            const SizedBox(height: 20),
+            SizedBox(height: compact ? 10 : 20),
             Row(
               crossAxisAlignment: CrossAxisAlignment.center,
               children: [
@@ -523,9 +527,9 @@ class LoomHomeView extends ConsumerWidget {
                           height: 0.94,
                           fontWeight: FontWeight.w500,
                           letterSpacing: -1.8,
-                        ),
+                        ).copyWith(fontSize: compact ? 28 : 32),
                       ),
-                      const SizedBox(height: 12),
+                      SizedBox(height: compact ? 7 : 12),
                       Text(
                         isStarted
                             ? 'Трафик зашифрован. Можно пользоваться интернетом.'
@@ -541,6 +545,7 @@ class LoomHomeView extends ConsumerWidget {
                 ),
                 const SizedBox(width: 18),
                 LoomPowerButton(
+                  compact: compact,
                   enabled: true,
                   isStarted: isStarted,
                   onPressed: () =>
@@ -548,8 +553,9 @@ class LoomHomeView extends ConsumerWidget {
                 ),
               ],
             ),
-            const SizedBox(height: 28),
+            SizedBox(height: compact ? 14 : 28),
             LoomCard(
+              padding: EdgeInsets.all(compact ? 12 : 16),
               onTap: () => _toServers(ref),
               child: Row(
                 children: [
@@ -594,11 +600,12 @@ class LoomHomeView extends ConsumerWidget {
                 ],
               ),
             ),
-            const SizedBox(height: 10),
+            SizedBox(height: compact ? 8 : 10),
             Row(
               children: [
                 Expanded(
                   child: LoomMetricCard(
+                    compact: compact,
                     label: 'ПРОТОКОЛ',
                     value: proxy?.type.toUpperCase() ?? '—',
                     caption: 'Автовыбор',
@@ -607,6 +614,7 @@ class LoomHomeView extends ConsumerWidget {
                 const SizedBox(width: 10),
                 Expanded(
                   child: LoomMetricCard(
+                    compact: compact,
                     label: 'ПИНГ',
                     value: delay != null && delay > 0 ? '$delay мс' : '—',
                     caption: delay == 0
@@ -618,20 +626,23 @@ class LoomHomeView extends ConsumerWidget {
                 ),
               ],
             ),
-            const SizedBox(height: 10),
+            SizedBox(height: compact ? 8 : 10),
             if (isStarted)
-              const LoomTrafficCard()
+              LoomTrafficCard(compact: compact)
             else
-              LoomAdblockCard(profile: profile),
-            const SizedBox(height: 18),
+              LoomAdblockCard(profile: profile, compact: compact),
+            SizedBox(height: compact ? 12 : 18),
             LoomPrimaryButton(
+              compact: compact,
               label: isStarted ? 'ОТКЛЮЧИТЬСЯ' : 'ПОДКЛЮЧИТЬСЯ',
               outlined: isStarted,
               onPressed: () =>
                   ref.read(commonActionProvider.notifier).toggleRunning(),
             ),
-          ],
-        ),
+              ],
+            ),
+          );
+        },
       ),
     );
   }
@@ -2233,12 +2244,14 @@ class LoomStatus extends StatelessWidget {
 }
 
 class LoomPowerButton extends StatelessWidget {
+  final bool compact;
   final bool enabled;
   final bool isStarted;
   final VoidCallback onPressed;
 
   const LoomPowerButton({
     super.key,
+    this.compact = false,
     required this.enabled,
     required this.isStarted,
     required this.onPressed,
@@ -2246,6 +2259,7 @@ class LoomPowerButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final diameter = compact ? 88.0 : 116.0;
     return Semantics(
       button: true,
       label: enabled
@@ -2254,9 +2268,9 @@ class LoomPowerButton extends StatelessWidget {
                 : 'Подключить VPN'
           : 'Добавить подписку',
       child: Container(
-        width: 116,
-        height: 116,
-        padding: const EdgeInsets.all(8),
+        width: diameter,
+        height: diameter,
+        padding: EdgeInsets.all(compact ? 6 : 8),
         decoration: BoxDecoration(
           shape: BoxShape.circle,
           border: Border.all(color: enabled ? loomAccent : loomBorder),
@@ -2272,7 +2286,7 @@ class LoomPowerButton extends StatelessWidget {
             onTap: onPressed,
             child: Icon(
               enabled ? Icons.power_settings_new : Icons.add_link,
-              size: 38,
+              size: compact ? 31 : 38,
               color: enabled ? loomInk : loomMuted,
             ),
           ),
@@ -2346,12 +2360,14 @@ class LoomSectionTitle extends StatelessWidget {
 }
 
 class LoomMetricCard extends StatelessWidget {
+  final bool compact;
   final String label;
   final String value;
   final String caption;
 
   const LoomMetricCard({
     super.key,
+    this.compact = false,
     required this.label,
     required this.value,
     required this.caption,
@@ -2360,11 +2376,12 @@ class LoomMetricCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return LoomCard(
+      padding: EdgeInsets.all(compact ? 12 : 16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           LoomEyebrow(label),
-          const SizedBox(height: 12),
+          SizedBox(height: compact ? 7 : 12),
           Text(
             value,
             maxLines: 1,
@@ -2375,7 +2392,7 @@ class LoomMetricCard extends StatelessWidget {
               fontWeight: FontWeight.w800,
             ),
           ),
-          const SizedBox(height: 7),
+          SizedBox(height: compact ? 3 : 7),
           Text(
             caption,
             maxLines: 1,
@@ -2392,6 +2409,7 @@ class LoomPrimaryButton extends StatelessWidget {
   final String label;
   final IconData? icon;
   final bool outlined;
+  final bool compact;
   final VoidCallback onPressed;
 
   const LoomPrimaryButton({
@@ -2399,6 +2417,7 @@ class LoomPrimaryButton extends StatelessWidget {
     required this.label,
     this.icon,
     this.outlined = false,
+    this.compact = false,
     required this.onPressed,
   });
 
@@ -2416,7 +2435,9 @@ class LoomPrimaryButton extends StatelessWidget {
       ],
     );
     final style = ButtonStyle(
-      minimumSize: const WidgetStatePropertyAll(Size.fromHeight(50)),
+      minimumSize: WidgetStatePropertyAll(
+        Size.fromHeight(compact ? 44 : 50),
+      ),
       shape: WidgetStatePropertyAll(
         RoundedRectangleBorder(borderRadius: BorderRadius.circular(3)),
       ),
@@ -2461,6 +2482,7 @@ class LoomAdblockCard extends ConsumerWidget {
     final rules = ref.watch(profileAddedRulesProvider(profile.id)).value ?? [];
     final enabled = rules.any(isLoomAdblockRule);
     return LoomCard(
+      padding: EdgeInsets.all(compact ? 12 : 16),
       child: Row(
         children: [
           const Icon(Icons.shield_outlined, color: loomInk, size: 30),
@@ -2502,7 +2524,9 @@ class LoomAdblockCard extends ConsumerWidget {
 }
 
 class LoomTrafficCard extends ConsumerWidget {
-  const LoomTrafficCard({super.key});
+  final bool compact;
+
+  const LoomTrafficCard({super.key, this.compact = false});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -2519,11 +2543,12 @@ class LoomTrafficCard extends ConsumerWidget {
               )
               .toList();
     return LoomCard(
+      padding: EdgeInsets.all(compact ? 12 : 16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           const LoomEyebrow('ТРАФИК СЕССИИ'),
-          const SizedBox(height: 12),
+          SizedBox(height: compact ? 6 : 12),
           Row(
             children: [
               Expanded(
@@ -2549,7 +2574,7 @@ class LoomTrafficCard extends ConsumerWidget {
               ),
             ],
           ),
-          const SizedBox(height: 6),
+          SizedBox(height: compact ? 4 : 6),
           const Row(
             children: [
               Expanded(
@@ -2567,9 +2592,9 @@ class LoomTrafficCard extends ConsumerWidget {
               ),
             ],
           ),
-          const SizedBox(height: 8),
+          SizedBox(height: compact ? 4 : 8),
           SizedBox(
-            height: 34,
+            height: compact ? 18 : 34,
             child: LineChart(color: loomAccent, points: points),
           ),
         ],

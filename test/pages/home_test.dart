@@ -297,6 +297,52 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+  testWidgets('LOOM home compacts for a short resizable window', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(1360, 1160);
+    tester.view.devicePixelRatio = 2;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    final profile = Profile.normal();
+    final container = ProviderContainer(
+      overrides: [
+        profilesProvider.overrideWith(() => _HomeTestProfiles([profile])),
+        currentProfileIdProvider.overrideWithBuild((_, _) => profile.id),
+      ],
+    );
+    addTearDown(container.dispose);
+    globalState.container = container;
+
+    await tester.pumpWidget(
+      UncontrolledProviderScope(
+        container: container,
+        child: const _TestApp(child: LoomHomeView()),
+      ),
+    );
+    await tester.pump();
+
+    expect(
+      tester.widget<LoomPowerButton>(find.byType(LoomPowerButton)).compact,
+      isTrue,
+    );
+    expect(
+      tester.getBottomRight(find.text('ПОДКЛЮЧИТЬСЯ')).dy,
+      lessThanOrEqualTo(580),
+    );
+    expect(tester.takeException(), isNull);
+
+    tester.view.physicalSize = const Size(1800, 1800);
+    await tester.pump();
+
+    expect(
+      tester.widget<LoomPowerButton>(find.byType(LoomPowerButton)).compact,
+      isFalse,
+    );
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets(
     'desktop navigation keeps arrow traversal after keyboard page changes',
     (tester) async {
