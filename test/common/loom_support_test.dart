@@ -1,9 +1,23 @@
+import 'dart:async';
 import 'dart:convert';
+import 'dart:typed_data';
 
+import 'package:dio/dio.dart';
 import 'package:fl_clash/common/loom_support.dart';
+import 'package:fl_clash/common/preferences.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+
+const _deviceCredential = 'abcdefghijklmnopqrstuvwxyz0123456789ABCDEFG';
 
 void main() {
+  setUpAll(() async {
+    await preferences.sharedPreferencesCompleter.future;
+    SharedPreferences.setMockInitialValues({});
+    preferences.sharedPreferencesCompleter = Completer()
+      ..complete(await SharedPreferences.getInstance());
+  });
+
   test('support endpoint is one exact HTTPS origin', () {
     expect(loomSupportApiUri.scheme, 'https');
     expect(loomSupportApiUri.origin, loomSupportApiBaseUrl);
@@ -132,4 +146,67 @@ void main() {
     inbox.restore('support-b', 0);
     expect(inbox.value, isFalse);
   });
+
+  test('existing support installation binds to the Android device', () async {
+    final requests = <RequestOptions>[];
+    final dio = Dio();
+    dio.httpClientAdapter = _ResponseAdapter((options) {
+      requests.add(options);
+      return switch ((options.method, options.path)) {
+        ('POST', final path) when path.endsWith('/api/v1/support/bootstrap') =>
+          _jsonResponse({
+            'support_id': '1d42fe12-a042-42a6-87c1-60216ad63d90',
+            'bearer_token': _deviceCredential,
+          }, statusCode: 201),
+        ('PUT', final path) when path.endsWith('/api/v1/support/device') =>
+          ResponseBody.fromString('', 204),
+        ('GET', final path) when path.endsWith('/api/v1/support/thread') =>
+          _jsonResponse(null),
+        ('POST', final path) when path.endsWith('/api/v1/support/thread') =>
+          _jsonResponse({}),
+        _ => _jsonResponse({}, statusCode: 404),
+      };
+    });
+    final client = LoomSupportClient(
+      platform: 'android',
+      appVersion: '0.2.0',
+      dio: dio,
+      deviceCredential: () async => _deviceCredential,
+    );
+
+    await client.ensureOpenThread();
+
+    final binding = requests.singleWhere(
+      (request) => request.path.endsWith('/api/v1/support/device'),
+    );
+    expect(binding.method, 'PUT');
+    expect(binding.headers['Authorization'], 'Bearer $_deviceCredential');
+    expect(binding.data, {'device_credential': _deviceCredential});
+  });
+}
+
+ResponseBody _jsonResponse(Object? body, {int statusCode = 200}) {
+  return ResponseBody.fromString(
+    jsonEncode(body),
+    statusCode,
+    headers: {
+      Headers.contentTypeHeader: ['application/json'],
+    },
+  );
+}
+
+final class _ResponseAdapter implements HttpClientAdapter {
+  final ResponseBody Function(RequestOptions options) response;
+
+  _ResponseAdapter(this.response);
+
+  @override
+  Future<ResponseBody> fetch(
+    RequestOptions options,
+    Stream<Uint8List>? requestStream,
+    Future<void>? cancelFuture,
+  ) async => response(options);
+
+  @override
+  void close({bool force = false}) {}
 }

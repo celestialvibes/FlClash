@@ -26,6 +26,9 @@ LoomSupportClient sharedLoomSupportClient({
 }) => _sharedLoomSupportClient ??= LoomSupportClient(
   platform: platform,
   appVersion: appVersion,
+  deviceCredential: Platform.isAndroid
+      ? () => loomDeviceCredentials.current()
+      : null,
 );
 
 Uri get loomSupportApiUri {
@@ -319,18 +322,22 @@ class LoomSupportClient {
   final String platform;
   final String appVersion;
   final Dio _dio;
+  final Future<String?> Function()? _deviceCredential;
   LoomSupportCredential? _credential;
 
   LoomSupportClient({
     required this.platform,
     required this.appVersion,
     Dio? dio,
-  }) : _dio = dio ?? createLoomApiDio();
+    Future<String?> Function()? deviceCredential,
+  }) : _dio = dio ?? createLoomApiDio(),
+       _deviceCredential = deviceCredential;
 
   LoomSupportCredential? get credential => _credential;
 
   Future<LoomSupportCredential> ensureOpenThread() async {
     final credential = await _loadCredential();
+    await _bindDevice(credential);
     final thread = await _withBearer(
       (token) => _dio.get<Object?>(_url('thread'), options: _options(token)),
     );
@@ -455,14 +462,7 @@ class LoomSupportClient {
   }
 
   Future<LoomSupportCredential> _bootstrap() async {
-    String? deviceCredential;
-    if (Platform.isAndroid) {
-      try {
-        deviceCredential = await loomDeviceCredentials.current();
-      } catch (_) {
-        deviceCredential = null;
-      }
-    }
+    final deviceCredential = await _deviceCredentialValue();
     final response = await _dio.post<Object?>(
       loomSupportApiUri.resolve('$_supportPath/bootstrap').toString(),
       data: {
@@ -483,6 +483,29 @@ class LoomSupportClient {
     if (!saved) throw StateError('support credential could not be persisted');
     _credential = credential;
     return credential;
+  }
+
+  Future<void> _bindDevice(LoomSupportCredential credential) async {
+    final deviceCredential = await _deviceCredentialValue();
+    if (deviceCredential == null) return;
+    try {
+      await _dio.put<Object?>(
+        _url('device'),
+        data: {'device_credential': deviceCredential},
+        options: _options(credential.bearerToken),
+      );
+    } on DioException {
+      return;
+    }
+  }
+
+  Future<String?> _deviceCredentialValue() async {
+    try {
+      final value = await _deviceCredential?.call();
+      return value != null && isLoomDeviceCredential(value) ? value : null;
+    } catch (_) {
+      return null;
+    }
   }
 
   Future<void> _clearCredential() async {
