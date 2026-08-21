@@ -5,6 +5,10 @@ import 'package:fl_clash/views/loom.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
+  test('LOOM onboarding opens the current website', () {
+    expect(loomSubscriptionUrl, 'https://loomvpn.pro');
+  });
+
   test('LOOM diagnostics only expose coarse allowlisted state', () {
     final report = buildLoomSafeDiagnosticReport(
       appVersion: 'secret build value',

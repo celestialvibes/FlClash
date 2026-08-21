@@ -30,7 +30,7 @@ const loomMuted = Color(0xFF8A8A86);
 const loomBorder = Color(0xFF30302D);
 const loomSuccess = Color(0xFF6CF39A);
 
-const loomSubscriptionUrl = 'https://t.me/l00mvpn_bot';
+const loomSubscriptionUrl = 'https://loomvpn.pro';
 const loomGuideUrl = 'https://loomhost.ru/start';
 const loomAdblockGeosite = 'category-ads-all';
 
@@ -1176,10 +1176,17 @@ class _LoomSupportViewState extends ConsumerState<LoomSupportView>
   Future<void> poll(PollGuard isCurrent) async {
     try {
       if (!_directRuleReady) {
-        await _ensureLoomSupportDirectRule(
-          ref,
-          ref.read(currentProfileProvider),
-        );
+        try {
+          await _ensureLoomSupportDirectRule(
+            ref,
+            ref.read(currentProfileProvider),
+          );
+        } catch (error, stackTrace) {
+          commonPrint.log(
+            'support DIRECT rule failed: $error\n$stackTrace',
+            logLevel: LogLevel.warning,
+          );
+        }
         _directRuleReady = true;
       }
       if (!_ready) {
@@ -1210,7 +1217,11 @@ class _LoomSupportViewState extends ConsumerState<LoomSupportView>
         _error = null;
       });
       await loomSupportInbox.markSeenThrough(supportId, _afterId);
-    } catch (_) {
+    } catch (error, stackTrace) {
+      commonPrint.log(
+        'support poll failed: $error\n$stackTrace',
+        logLevel: LogLevel.warning,
+      );
       if (!isCurrent()) return;
       setState(() {
         _loading = false;

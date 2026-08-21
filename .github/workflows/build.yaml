@@ -192,7 +192,7 @@ jobs:
         run: flutter pub get
 
       - name: Test changed UI contracts
-        run: flutter test test/common/link_test.dart test/common/protocol_test.dart test/pages/home_test.dart
+        run: flutter test test/common/link_test.dart test/common/protocol_test.dart test/loom_brand_test.dart test/pages/home_test.dart
 
       - name: Build portable x64 package
         run: dart setup.dart windows --env stable --targets zip
