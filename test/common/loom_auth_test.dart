@@ -6,6 +6,51 @@ import 'package:fl_clash/common/loom_auth.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
+  test('Telegram approval returns the current device Mihomo URL', () async {
+    final requests = <RequestOptions>[];
+    var statusCalls = 0;
+    final dio = Dio();
+    dio.httpClientAdapter = _ResponseAdapter((options) {
+      requests.add(options);
+      return switch (options.path) {
+        final path when path.endsWith('/api/v1/auth/telegram/start') =>
+          _jsonResponse({
+            'public_token': 'aBcDeFgHiJkLmNoPqRsTuVwXyZ012345',
+            'authorization_url':
+                'https://oauth.telegram.org/auth?client_id=123&redirect_uri=https%3A%2F%2Floomvpn.pro%2Fapi%2Fv1%2Fauth%2Ftelegram%2Fcallback&state=0123456789abcdef&response_type=code&scope=openid%20profile&code_challenge=abcdefghijklmnopqrstuvwxyz0123456789ABCDEFG&code_challenge_method=S256',
+            'expires_in_seconds': 300,
+          }),
+        final path when path.endsWith('/api/v1/auth/telegram/status') =>
+          ++statusCalls == 1
+              ? _jsonResponse({'status': 'pending'})
+              : _jsonResponse({
+                  'status': 'approved',
+                  'device_id': 'e30218a7-3d3b-4b50-920e-a6ee55211db3',
+                  'config_url': 'https://lmvn.pro/Ab3dE/mihomo',
+                }),
+        _ => _jsonResponse({}, statusCode: 404),
+      };
+    });
+    final client = LoomAuthClient(
+      platform: 'windows',
+      appVersion: '1.0.0',
+      appBuild: '16',
+      dio: dio,
+    );
+    const installationId = '65af74c6-40f7-46b7-936b-724256aff099';
+
+    final challenge = await client.requestTelegramLogin(
+      installationId: installationId,
+    );
+    expect(await client.pollTelegramLogin(challenge), isNull);
+    final activation = await client.pollTelegramLogin(challenge);
+
+    expect(activation?.subscriptionUrl, 'https://lmvn.pro/Ab3dE/mihomo');
+    expect(requests.first.data, containsPair('device_key', installationId));
+    expect(requests.first.data, containsPair('platform', 'windows'));
+    expect(requests.last.data, {'public_token': challenge.publicToken});
+  });
+
   test('email OTP registers one installation and returns Mihomo URL', () async {
     final requests = <RequestOptions>[];
     final dio = Dio();

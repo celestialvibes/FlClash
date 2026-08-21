@@ -403,6 +403,7 @@ class MessageLookup extends MessageLookupByLibrary {
     "loomAuthSubscriptionMissing": MessageLookupByLibrary.simpleMessage(
       "此邮箱没有有效的 LOOM 订阅。",
     ),
+    "loomChooseLogin": MessageLookupByLibrary.simpleMessage("登录 LOOM"),
     "loomCodeInvalid": MessageLookupByLibrary.simpleMessage("请输入 6 位验证码"),
     "loomCodeLabel": MessageLookupByLibrary.simpleMessage("6 位验证码"),
     "loomCodeTitle": MessageLookupByLibrary.simpleMessage("邮件验证码"),
@@ -414,9 +415,18 @@ class MessageLookup extends MessageLookupByLibrary {
       "从订阅到安全连接，一条清晰简单的路径。",
     ),
     "loomHelloTitle": MessageLookupByLibrary.simpleMessage("私人网络。\n始终站在你这边。"),
+    "loomLogin": MessageLookupByLibrary.simpleMessage("登录 LOOM"),
     "loomLoginByEmail": MessageLookupByLibrary.simpleMessage("使用邮箱登录"),
+    "loomLoginWithTelegram": MessageLookupByLibrary.simpleMessage(
+      "使用 Telegram 继续",
+    ),
     "loomManualSubscription": MessageLookupByLibrary.simpleMessage("手动输入订阅"),
     "loomNeedHelp": MessageLookupByLibrary.simpleMessage("需要帮助？"),
+    "loomTelegramExpired": MessageLookupByLibrary.simpleMessage("确认已过期，请重新登录。"),
+    "loomTelegramTitle": MessageLookupByLibrary.simpleMessage("确认登录"),
+    "loomTelegramWaiting": MessageLookupByLibrary.simpleMessage(
+      "请在打开的页面中完成 Telegram 登录，然后返回 LOOM。",
+    ),
     "loopback": MessageLookupByLibrary.simpleMessage("回环解锁工具"),
     "loopbackDesc": MessageLookupByLibrary.simpleMessage("用于UWP回环解锁"),
     "loose": MessageLookupByLibrary.simpleMessage("宽松"),

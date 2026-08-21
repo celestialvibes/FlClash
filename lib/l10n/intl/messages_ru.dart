@@ -590,6 +590,7 @@ class MessageLookup extends MessageLookupByLibrary {
     "loomAuthSubscriptionMissing": MessageLookupByLibrary.simpleMessage(
       "Для этой почты не найдена активная подписка LOOM.",
     ),
+    "loomChooseLogin": MessageLookupByLibrary.simpleMessage("Войти в LOOM"),
     "loomCodeInvalid": MessageLookupByLibrary.simpleMessage(
       "Введите код из 6 цифр",
     ),
@@ -609,11 +610,24 @@ class MessageLookup extends MessageLookupByLibrary {
     "loomHelloTitle": MessageLookupByLibrary.simpleMessage(
       "Личная сеть.\nНа вашей стороне.",
     ),
+    "loomLogin": MessageLookupByLibrary.simpleMessage("ВОЙТИ В LOOM"),
     "loomLoginByEmail": MessageLookupByLibrary.simpleMessage("ВОЙТИ ПО ПОЧТЕ"),
+    "loomLoginWithTelegram": MessageLookupByLibrary.simpleMessage(
+      "Продолжить через Telegram",
+    ),
     "loomManualSubscription": MessageLookupByLibrary.simpleMessage(
       "Ввести подписку вручную",
     ),
     "loomNeedHelp": MessageLookupByLibrary.simpleMessage("Нужна помощь?"),
+    "loomTelegramExpired": MessageLookupByLibrary.simpleMessage(
+      "Подтверждение истекло. Начните вход ещё раз.",
+    ),
+    "loomTelegramTitle": MessageLookupByLibrary.simpleMessage(
+      "Подтвердите вход",
+    ),
+    "loomTelegramWaiting": MessageLookupByLibrary.simpleMessage(
+      "Завершите вход через Telegram в открывшемся окне, затем вернитесь в LOOM.",
+    ),
     "loopback": MessageLookupByLibrary.simpleMessage(
       "Инструмент разблокировки Loopback",
     ),

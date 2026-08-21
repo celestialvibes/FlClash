@@ -40,9 +40,16 @@ void main() {
     expect(find.text('LOOM.'), findsOneWidget);
     expect(find.text('Личная сеть.\nНа вашей стороне.'), findsOneWidget);
     expect(find.text('ПОЛУЧИТЬ ПОДПИСКУ'), findsOneWidget);
-    expect(find.text('ВОЙТИ ПО ПОЧТЕ'), findsOneWidget);
+    expect(find.text('ВОЙТИ В LOOM'), findsOneWidget);
     expect(find.text('Ввести подписку вручную'), findsOneWidget);
     expect(find.text('Нужна помощь?'), findsOneWidget);
+
+    await tester.tap(find.text('ВОЙТИ В LOOM'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Войти в LOOM'), findsOneWidget);
+    expect(find.text('Продолжить через Telegram'), findsOneWidget);
+    expect(find.text('ВОЙТИ ПО ПОЧТЕ'), findsOneWidget);
 
     await tester.tap(find.text('ВОЙТИ ПО ПОЧТЕ'));
     await tester.pumpAndSettle();

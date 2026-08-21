@@ -453,6 +453,7 @@ class MessageLookup extends MessageLookupByLibrary {
     "loomAuthSubscriptionMissing": MessageLookupByLibrary.simpleMessage(
       "このメールアドレスに有効なLOOMサブスクリプションがありません。",
     ),
+    "loomChooseLogin": MessageLookupByLibrary.simpleMessage("LOOMにログイン"),
     "loomCodeInvalid": MessageLookupByLibrary.simpleMessage("6桁のコードを入力してください"),
     "loomCodeLabel": MessageLookupByLibrary.simpleMessage("6桁のコード"),
     "loomCodeTitle": MessageLookupByLibrary.simpleMessage("メールの確認コード"),
@@ -468,11 +469,22 @@ class MessageLookup extends MessageLookupByLibrary {
     "loomHelloTitle": MessageLookupByLibrary.simpleMessage(
       "プライベートネットワーク。\nあなたの味方です。",
     ),
+    "loomLogin": MessageLookupByLibrary.simpleMessage("LOOMにログイン"),
     "loomLoginByEmail": MessageLookupByLibrary.simpleMessage("メールでログイン"),
+    "loomLoginWithTelegram": MessageLookupByLibrary.simpleMessage(
+      "Telegramで続ける",
+    ),
     "loomManualSubscription": MessageLookupByLibrary.simpleMessage(
       "サブスクリプションを手動入力",
     ),
     "loomNeedHelp": MessageLookupByLibrary.simpleMessage("お困りですか？"),
+    "loomTelegramExpired": MessageLookupByLibrary.simpleMessage(
+      "確認の有効期限が切れました。もう一度ログインしてください。",
+    ),
+    "loomTelegramTitle": MessageLookupByLibrary.simpleMessage("ログインを確認"),
+    "loomTelegramWaiting": MessageLookupByLibrary.simpleMessage(
+      "開いた画面でTelegramログインを完了してから、LOOMに戻ってください。",
+    ),
     "loopback": MessageLookupByLibrary.simpleMessage("ループバック解除ツール"),
     "loopbackDesc": MessageLookupByLibrary.simpleMessage("UWPループバック解除用"),
     "loose": MessageLookupByLibrary.simpleMessage("疎"),

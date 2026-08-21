@@ -17,6 +17,7 @@ final _uuidPattern = RegExp(
 enum LoomAuthFailure {
   invalidCode,
   expiredCode,
+  authorizationExpired,
   rateLimited,
   subscriptionMissing,
   deviceLimit,
@@ -35,6 +36,18 @@ class LoomLoginChallenge {
   final int expiresInSeconds;
 
   const LoomLoginChallenge({required this.id, required this.expiresInSeconds});
+}
+
+class LoomTelegramChallenge {
+  final String publicToken;
+  final String authorizationUrl;
+  final int expiresInSeconds;
+
+  const LoomTelegramChallenge({
+    required this.publicToken,
+    required this.authorizationUrl,
+    required this.expiresInSeconds,
+  });
 }
 
 class LoomActivation {
@@ -66,6 +79,80 @@ class LoomAuthClient {
     required this.appBuild,
     Dio? dio,
   }) : _dio = dio ?? _createLoomAuthDio();
+
+  Future<LoomTelegramChallenge> requestTelegramLogin({
+    required String installationId,
+  }) async {
+    try {
+      final response = await _dio.post<Object?>(
+        loomSupportApiUri.resolve('/api/v1/auth/telegram/start').toString(),
+        data: {
+          'platform': platform,
+          'label': _deviceLabel(platform, installationId),
+          'device_key': installationId,
+          'app_version': appVersion,
+          'app_build': appBuild,
+        },
+      );
+      final data = _map(response.data);
+      final publicToken = data['public_token'];
+      final authorizationUrl = data['authorization_url'];
+      final expiresInSeconds = data['expires_in_seconds'];
+      if (publicToken is! String ||
+          !RegExp(r'^[A-Za-z0-9_-]{16,64}$').hasMatch(publicToken) ||
+          authorizationUrl is! String ||
+          !_isTelegramAuthorizationUrl(authorizationUrl) ||
+          expiresInSeconds is! num ||
+          expiresInSeconds <= 0 ||
+          expiresInSeconds > 900) {
+        throw const LoomAuthException(LoomAuthFailure.invalidResponse);
+      }
+      return LoomTelegramChallenge(
+        publicToken: publicToken,
+        authorizationUrl: authorizationUrl,
+        expiresInSeconds: expiresInSeconds.toInt(),
+      );
+    } on DioException catch (error) {
+      throw _failure(error);
+    }
+  }
+
+  Future<LoomActivation?> pollTelegramLogin(
+    LoomTelegramChallenge challenge,
+  ) async {
+    try {
+      final response = await _dio.post<Object?>(
+        loomSupportApiUri.resolve('/api/v1/auth/telegram/status').toString(),
+        data: {'public_token': challenge.publicToken},
+      );
+      final data = _map(response.data);
+      switch (data['status']) {
+        case 'pending':
+          return null;
+        case 'expired':
+          throw const LoomAuthException(LoomAuthFailure.authorizationExpired);
+        case 'approved':
+          final deviceId = data['device_id'];
+          final configUrl = data['config_url'];
+          if (deviceId is! String ||
+              !_uuidPattern.hasMatch(deviceId) ||
+              configUrl is! String) {
+            throw const LoomAuthException(LoomAuthFailure.invalidResponse);
+          }
+          return LoomActivation(
+            deviceId: deviceId,
+            subscriptionUrl: _mihomoUrl(configUrl),
+          );
+        default:
+          throw const LoomAuthException(LoomAuthFailure.invalidResponse);
+      }
+    } on DioException catch (error) {
+      if (error.response?.statusCode == HttpStatus.notFound) {
+        throw const LoomAuthException(LoomAuthFailure.authorizationExpired);
+      }
+      throw _failure(error);
+    }
+  }
 
   Future<LoomLoginChallenge> requestCode(String email) async {
     try {
@@ -138,6 +225,26 @@ class LoomAuthClient {
       throw _failure(error);
     }
   }
+}
+
+bool _isTelegramAuthorizationUrl(String value) {
+  final uri = Uri.tryParse(value);
+  final redirectUri = Uri.tryParse(uri?.queryParameters['redirect_uri'] ?? '');
+  final state = uri?.queryParameters['state'] ?? '';
+  final codeChallenge = uri?.queryParameters['code_challenge'] ?? '';
+  final scopes = (uri?.queryParameters['scope'] ?? '').split(' ');
+  return uri != null &&
+      uri.scheme == 'https' &&
+      uri.host == 'oauth.telegram.org' &&
+      uri.path == '/auth' &&
+      RegExp(r'^\d+$').hasMatch(uri.queryParameters['client_id'] ?? '') &&
+      uri.queryParameters['response_type'] == 'code' &&
+      RegExp(r'^[A-Za-z0-9_-]{16,128}$').hasMatch(state) &&
+      RegExp(r'^[A-Za-z0-9_-]{43,128}$').hasMatch(codeChallenge) &&
+      uri.queryParameters['code_challenge_method'] == 'S256' &&
+      scopes.contains('openid') &&
+      redirectUri != null &&
+      isLoomSubscriptionUrl(redirectUri.toString());
 }
 
 String _deviceLabel(String platform, String installationId) {

@@ -571,6 +571,7 @@ class MessageLookup extends MessageLookupByLibrary {
     "loomAuthSubscriptionMissing": MessageLookupByLibrary.simpleMessage(
       "No active LOOM subscription was found for this email.",
     ),
+    "loomChooseLogin": MessageLookupByLibrary.simpleMessage("Sign in to LOOM"),
     "loomCodeInvalid": MessageLookupByLibrary.simpleMessage(
       "Enter the 6-digit code",
     ),
@@ -590,13 +591,26 @@ class MessageLookup extends MessageLookupByLibrary {
     "loomHelloTitle": MessageLookupByLibrary.simpleMessage(
       "Private network.\nOn your side.",
     ),
+    "loomLogin": MessageLookupByLibrary.simpleMessage("SIGN IN TO LOOM"),
     "loomLoginByEmail": MessageLookupByLibrary.simpleMessage(
       "SIGN IN WITH EMAIL",
+    ),
+    "loomLoginWithTelegram": MessageLookupByLibrary.simpleMessage(
+      "Continue with Telegram",
     ),
     "loomManualSubscription": MessageLookupByLibrary.simpleMessage(
       "Enter subscription manually",
     ),
     "loomNeedHelp": MessageLookupByLibrary.simpleMessage("Need help?"),
+    "loomTelegramExpired": MessageLookupByLibrary.simpleMessage(
+      "Confirmation expired. Start signing in again.",
+    ),
+    "loomTelegramTitle": MessageLookupByLibrary.simpleMessage(
+      "Confirm sign-in",
+    ),
+    "loomTelegramWaiting": MessageLookupByLibrary.simpleMessage(
+      "Complete Telegram sign-in in the opened window, then return to LOOM.",
+    ),
     "loopback": MessageLookupByLibrary.simpleMessage("Loopback unlock tool"),
     "loopbackDesc": MessageLookupByLibrary.simpleMessage(
       "Used for UWP loopback unlocking",

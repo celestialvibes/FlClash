@@ -4569,6 +4569,66 @@ class AppLocalizations {
     );
   }
 
+  /// `SIGN IN TO LOOM`
+  String get loomLogin {
+    return Intl.message(
+      'SIGN IN TO LOOM',
+      name: 'loomLogin',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Sign in to LOOM`
+  String get loomChooseLogin {
+    return Intl.message(
+      'Sign in to LOOM',
+      name: 'loomChooseLogin',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Continue with Telegram`
+  String get loomLoginWithTelegram {
+    return Intl.message(
+      'Continue with Telegram',
+      name: 'loomLoginWithTelegram',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Confirm sign-in`
+  String get loomTelegramTitle {
+    return Intl.message(
+      'Confirm sign-in',
+      name: 'loomTelegramTitle',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Complete Telegram sign-in in the opened window, then return to LOOM.`
+  String get loomTelegramWaiting {
+    return Intl.message(
+      'Complete Telegram sign-in in the opened window, then return to LOOM.',
+      name: 'loomTelegramWaiting',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Confirmation expired. Start signing in again.`
+  String get loomTelegramExpired {
+    return Intl.message(
+      'Confirmation expired. Start signing in again.',
+      name: 'loomTelegramExpired',
+      desc: '',
+      args: [],
+    );
+  }
+
   /// `Enter subscription manually`
   String get loomManualSubscription {
     return Intl.message(

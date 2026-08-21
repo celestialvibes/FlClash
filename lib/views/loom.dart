@@ -21,6 +21,7 @@ import 'package:fl_clash/widgets/widgets.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 const loomAccent = Color(0xFFFF3300);
 const loomBackground = Color(0xFF090909);
@@ -328,6 +329,7 @@ String _loomAuthError(BuildContext context, LoomAuthFailure failure) {
   return switch (failure) {
     LoomAuthFailure.invalidCode => localizations.loomAuthInvalidCode,
     LoomAuthFailure.expiredCode => localizations.loomAuthExpiredCode,
+    LoomAuthFailure.authorizationExpired => localizations.loomTelegramExpired,
     LoomAuthFailure.rateLimited => localizations.loomAuthRateLimited,
     LoomAuthFailure.subscriptionMissing =>
       localizations.loomAuthSubscriptionMissing,
@@ -335,6 +337,158 @@ String _loomAuthError(BuildContext context, LoomAuthFailure failure) {
     LoomAuthFailure.network => localizations.networkException,
     LoomAuthFailure.invalidResponse => localizations.loomAuthInvalidResponse,
   };
+}
+
+enum _LoomLoginMethod { telegram, email }
+
+Future<_LoomLoginMethod?> _chooseLoomLoginMethod(BuildContext context) async {
+  final localizations = context.appLocalizations;
+  return globalState.showCommonDialog<_LoomLoginMethod>(
+    context: context,
+    child: CommonDialog(
+      title: localizations.loomChooseLogin,
+      padding: const EdgeInsets.fromLTRB(8, 8, 8, 12),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          ListTile(
+            leading: const Icon(Icons.send_rounded),
+            title: Text(localizations.loomLoginWithTelegram),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: () => Navigator.of(context).pop(_LoomLoginMethod.telegram),
+          ),
+          ListTile(
+            leading: const Icon(Icons.alternate_email),
+            title: Text(localizations.loomLoginByEmail),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: () => Navigator.of(context).pop(_LoomLoginMethod.email),
+          ),
+        ],
+      ),
+    ),
+  );
+}
+
+Future<void> _activateLoomTelegram(BuildContext context) async {
+  final client = LoomAuthClient(
+    platform: Platform.operatingSystem,
+    appVersion: globalState.packageInfo.version,
+    appBuild: globalState.packageInfo.buildNumber,
+  );
+  try {
+    final challenge = await client.requestTelegramLogin(
+      installationId: await loomInstallationId(),
+    );
+    final opened = await launchUrl(
+      Uri.parse(challenge.authorizationUrl),
+      mode: LaunchMode.externalApplication,
+    );
+    if (!opened || !context.mounted) {
+      throw const LoomAuthException(LoomAuthFailure.invalidResponse);
+    }
+    final activation = await globalState.showCommonDialog<LoomActivation>(
+      context: context,
+      dismissible: false,
+      child: _LoomTelegramLoginDialog(client: client, challenge: challenge),
+    );
+    if (activation != null && context.mounted) {
+      await _installLoomSubscription(context, activation.subscriptionUrl);
+    }
+  } on LoomAuthException catch (error) {
+    if (context.mounted) await _showLoomAuthError(context, error);
+  } catch (_) {
+    if (context.mounted) {
+      await _showLoomAuthError(
+        context,
+        const LoomAuthException(LoomAuthFailure.invalidResponse),
+      );
+    }
+  }
+}
+
+class _LoomTelegramLoginDialog extends StatefulWidget {
+  final LoomAuthClient client;
+  final LoomTelegramChallenge challenge;
+
+  const _LoomTelegramLoginDialog({
+    required this.client,
+    required this.challenge,
+  });
+
+  @override
+  State<_LoomTelegramLoginDialog> createState() =>
+      _LoomTelegramLoginDialogState();
+}
+
+class _LoomTelegramLoginDialogState extends State<_LoomTelegramLoginDialog> {
+  LoomAuthFailure? _failure;
+
+  @override
+  void initState() {
+    super.initState();
+    unawaited(_poll());
+  }
+
+  Future<void> _poll() async {
+    final deadline = DateTime.now().add(
+      Duration(seconds: widget.challenge.expiresInSeconds),
+    );
+    while (mounted && DateTime.now().isBefore(deadline)) {
+      try {
+        final activation = await widget.client.pollTelegramLogin(
+          widget.challenge,
+        );
+        if (!mounted) return;
+        if (activation != null) {
+          Navigator.of(context).pop(activation);
+          return;
+        }
+      } on LoomAuthException catch (error) {
+        if (error.failure != LoomAuthFailure.network) {
+          setState(() => _failure = error.failure);
+          return;
+        }
+      }
+      await Future<void>.delayed(const Duration(seconds: 2));
+    }
+    if (mounted) {
+      setState(() => _failure = LoomAuthFailure.authorizationExpired);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final localizations = context.appLocalizations;
+    return CommonDialog(
+      title: localizations.loomTelegramTitle,
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(),
+          child: Text(localizations.cancel),
+        ),
+      ],
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          if (_failure == null) ...[
+            const SizedBox(
+              width: 20,
+              height: 20,
+              child: CircularProgressIndicator(strokeWidth: 2),
+            ),
+            const SizedBox(width: 14),
+          ],
+          Expanded(
+            child: Text(
+              _failure == null
+                  ? localizations.loomTelegramWaiting
+                  : _loomAuthError(context, _failure!),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 }
 
 Future<void> _showLoomAuthError(
@@ -523,7 +677,18 @@ class _LoomHelloViewState extends State<LoomHelloView> {
     if (_activating) return;
     setState(() => _activating = true);
     try {
-      await _activateLoomSubscription(context);
+      final method = await _chooseLoomLoginMethod(context);
+      if (!mounted) return;
+      switch (method) {
+        case _LoomLoginMethod.telegram:
+          await _activateLoomTelegram(context);
+          return;
+        case _LoomLoginMethod.email:
+          await _activateLoomSubscription(context);
+          return;
+        case null:
+          return;
+      }
     } finally {
       if (mounted) setState(() => _activating = false);
     }
@@ -572,9 +737,9 @@ class _LoomHelloViewState extends State<LoomHelloView> {
                 ),
                 const SizedBox(height: 10),
                 LoomPrimaryButton(
-                  label: localizations.loomLoginByEmail,
+                  label: localizations.loomLogin,
                   outlined: true,
-                  icon: Icons.alternate_email,
+                  icon: Icons.login,
                   onPressed: _activating ? null : _activate,
                 ),
                 TextButton(
@@ -2583,9 +2748,7 @@ class LoomPrimaryButton extends StatelessWidget {
       ],
     );
     final style = ButtonStyle(
-      minimumSize: WidgetStatePropertyAll(
-        Size.fromHeight(compact ? 44 : 50),
-      ),
+      minimumSize: WidgetStatePropertyAll(Size.fromHeight(compact ? 44 : 50)),
       shape: WidgetStatePropertyAll(
         RoundedRectangleBorder(borderRadius: BorderRadius.circular(3)),
       ),
