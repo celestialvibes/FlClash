@@ -26,6 +26,7 @@ class Application extends ConsumerStatefulWidget {
 
 class ApplicationState extends ConsumerState<Application> {
   Timer? _autoUpdateProfilesTaskTimer;
+  StreamSubscription<LoomPushEvent>? _pushSubscription;
   bool _preHasVpn = false;
 
   final _pageTransitionsTheme = const PageTransitionsTheme(
@@ -135,10 +136,33 @@ class ApplicationState extends ConsumerState<Application> {
       } else {
         exit(0);
       }
+      _pushSubscription = loomPush.events.listen(_handlePushEvent);
+      await loomPush.start(
+        appVersion: globalState.packageInfo.version,
+        appBuild: globalState.packageInfo.buildNumber,
+      );
       _autoUpdateProfilesTask();
       _initLink();
       app?.initShortcuts();
     });
+  }
+
+  void _handlePushEvent(LoomPushEvent event) {
+    if (!event.opened) {
+      final text = [event.title, event.body].whereType<String>().join('\n');
+      if (text.isNotEmpty) globalState.showNotifier(text);
+      return;
+    }
+    final context = globalState.navigatorKey.currentContext;
+    switch (event.route) {
+      case LoomPushRoute.support when context != null:
+        BaseNavigator.push(context, const LoomSupportView());
+      case LoomPushRoute.subscription:
+        globalState.openUrl(loomSubscriptionUrl);
+      case null:
+      case LoomPushRoute.support:
+        return;
+    }
   }
 
   void _initLink() {
@@ -191,6 +215,9 @@ class ApplicationState extends ConsumerState<Application> {
           onConnectivityChanged: (results) async {
             commonPrint.log('connectivityChanged ${results.toString()}');
             ref.read(systemActionProvider.notifier).updateLocalIp();
+            if (results.any((result) => result != ConnectivityResult.none)) {
+              unawaited(loomPush.syncToken());
+            }
             final hasVpn = results.contains(ConnectivityResult.vpn);
             if (_preHasVpn == hasVpn) {
               ref.read(checkIpNumProvider.notifier).add();
@@ -258,6 +285,8 @@ class ApplicationState extends ConsumerState<Application> {
   void dispose() {
     linkManager.destroy();
     _autoUpdateProfilesTaskTimer?.cancel();
+    _pushSubscription?.cancel();
+    unawaited(loomPush.stop());
     super.dispose();
   }
 }

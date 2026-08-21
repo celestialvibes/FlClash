@@ -22,7 +22,30 @@ void main() {
     });
 
     test('Flutter build environment does not depend on Core SHA256', () {
-      expect(setup.createBuildEnvironment('dev'), {'APP_ENV': 'dev'});
+      expect(setup.createBuildEnvironment('dev', environment: const {}), {
+        'APP_ENV': 'dev',
+      });
+    });
+
+    test('passes configured Firebase identifiers to Flutter', () {
+      expect(
+        setup.createBuildEnvironment(
+          'prod',
+          environment: const {
+            'LOOM_FIREBASE_API_KEY': 'key',
+            'LOOM_FIREBASE_PROJECT_ID': 'project',
+            'LOOM_FIREBASE_APP_ID': 'app',
+            'LOOM_FIREBASE_MESSAGING_SENDER_ID': 'sender',
+          },
+        ),
+        {
+          'APP_ENV': 'prod',
+          'LOOM_FIREBASE_API_KEY': 'key',
+          'LOOM_FIREBASE_PROJECT_ID': 'project',
+          'LOOM_FIREBASE_APP_ID': 'app',
+          'LOOM_FIREBASE_MESSAGING_SENDER_ID': 'sender',
+        },
+      );
     });
 
     test('omits verbose from flutter build args by default', () {

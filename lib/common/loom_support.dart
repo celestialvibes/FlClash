@@ -324,7 +324,7 @@ class LoomSupportClient {
     required this.platform,
     required this.appVersion,
     Dio? dio,
-  }) : _dio = dio ?? _createSupportDio();
+  }) : _dio = dio ?? createLoomApiDio();
 
   LoomSupportCredential? get credential => _credential;
 
@@ -489,7 +489,7 @@ Map<String, dynamic> _mapOrEmpty(Object? value) {
   return _map(value);
 }
 
-Dio _createSupportDio() {
+Dio createLoomApiDio() {
   final dio = Dio(
     BaseOptions(
       headers: {'Accept': 'application/json'},

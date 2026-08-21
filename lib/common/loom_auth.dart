@@ -1,9 +1,9 @@
 import 'dart:io';
 
 import 'package:dio/dio.dart';
-import 'package:dio/io.dart';
 
 import 'link.dart';
+import 'loom_device_credential.dart';
 import 'loom_support.dart';
 import 'preferences.dart';
 import 'utils.dart';
@@ -72,13 +72,16 @@ class LoomAuthClient {
   final String appVersion;
   final String appBuild;
   final Dio _dio;
+  final Future<String?> Function()? _deviceCredential;
 
   LoomAuthClient({
     required this.platform,
     required this.appVersion,
     required this.appBuild,
     Dio? dio,
-  }) : _dio = dio ?? _createLoomAuthDio();
+    Future<String?> Function()? deviceCredential,
+  }) : _dio = dio ?? createLoomApiDio(),
+       _deviceCredential = deviceCredential;
 
   Future<LoomTelegramChallenge> requestTelegramLogin({
     required String installationId,
@@ -92,6 +95,7 @@ class LoomAuthClient {
           'device_key': installationId,
           'app_version': appVersion,
           'app_build': appBuild,
+          ...await _deviceCredentialPayload(),
         },
       );
       final data = _map(response.data);
@@ -205,6 +209,7 @@ class LoomAuthClient {
           'device_key': installationId,
           'app_version': appVersion,
           'app_build': appBuild,
+          ...await _deviceCredentialPayload(),
         },
         options: options,
       );
@@ -224,6 +229,15 @@ class LoomAuthClient {
     } on DioException catch (error) {
       throw _failure(error);
     }
+  }
+
+  Future<Map<String, String>> _deviceCredentialPayload() async {
+    final value = await _deviceCredential?.call();
+    if (value == null) return const {};
+    if (!isLoomDeviceCredential(value)) {
+      throw const LoomAuthException(LoomAuthFailure.invalidResponse);
+    }
+    return {'device_credential': value};
   }
 }
 
@@ -321,26 +335,4 @@ Map<String, dynamic> _map(Object? value) {
   if (value is Map<String, dynamic>) return value;
   if (value is Map) return value.cast<String, dynamic>();
   throw const LoomAuthException(LoomAuthFailure.invalidResponse);
-}
-
-Dio _createLoomAuthDio() {
-  final dio = Dio(
-    BaseOptions(
-      headers: {'Accept': 'application/json'},
-      connectTimeout: const Duration(seconds: 10),
-      sendTimeout: const Duration(seconds: 10),
-      receiveTimeout: const Duration(seconds: 10),
-    ),
-  );
-  dio.httpClientAdapter = IOHttpClientAdapter(
-    createHttpClient: () {
-      final client = HttpClient(
-        context: SecurityContext(withTrustedRoots: true),
-      );
-      client.badCertificateCallback = null;
-      client.findProxy = (_) => 'DIRECT';
-      return client;
-    },
-  );
-  return dio;
 }

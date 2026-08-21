@@ -374,6 +374,7 @@ Future<void> _activateLoomTelegram(BuildContext context) async {
     platform: Platform.operatingSystem,
     appVersion: globalState.packageInfo.version,
     appBuild: globalState.packageInfo.buildNumber,
+    deviceCredential: loomPush.deviceCredentialForAuth,
   );
   try {
     final challenge = await client.requestTelegramLogin(
@@ -392,7 +393,7 @@ Future<void> _activateLoomTelegram(BuildContext context) async {
       child: _LoomTelegramLoginDialog(client: client, challenge: challenge),
     );
     if (activation != null && context.mounted) {
-      await _installLoomSubscription(context, activation.subscriptionUrl);
+      await _completeLoomActivation(context, activation);
     }
   } on LoomAuthException catch (error) {
     if (context.mounted) await _showLoomAuthError(context, error);
@@ -526,6 +527,7 @@ Future<void> _activateLoomSubscription(BuildContext context) async {
     platform: Platform.operatingSystem,
     appVersion: globalState.packageInfo.version,
     appBuild: globalState.packageInfo.buildNumber,
+    deviceCredential: loomPush.deviceCredentialForAuth,
   );
   final LoomLoginChallenge challenge;
   try {
@@ -561,7 +563,7 @@ Future<void> _activateLoomSubscription(BuildContext context) async {
         installationId: await loomInstallationId(),
       );
       if (!context.mounted) return;
-      await _installLoomSubscription(context, activation.subscriptionUrl);
+      await _completeLoomActivation(context, activation);
       return;
     } on LoomAuthException catch (error) {
       if (!context.mounted) return;
@@ -569,6 +571,14 @@ Future<void> _activateLoomSubscription(BuildContext context) async {
       if (error.failure != LoomAuthFailure.invalidCode) return;
     }
   }
+}
+
+Future<void> _completeLoomActivation(
+  BuildContext context,
+  LoomActivation activation,
+) async {
+  await _installLoomSubscription(context, activation.subscriptionUrl);
+  unawaited(loomPush.syncToken());
 }
 
 Future<void> _applyLoomRules(WidgetRef ref, int profileId) async {

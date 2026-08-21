@@ -111,8 +111,22 @@ List<String> createFlutterBuildArgs({
   return flutterBuildArgs;
 }
 
-Map<String, String> createBuildEnvironment(String env) {
-  return {'APP_ENV': env};
+Map<String, String> createBuildEnvironment(
+  String env, {
+  Map<String, String>? environment,
+}) {
+  environment ??= Platform.environment;
+  const firebaseKeys = [
+    'LOOM_FIREBASE_API_KEY',
+    'LOOM_FIREBASE_PROJECT_ID',
+    'LOOM_FIREBASE_APP_ID',
+    'LOOM_FIREBASE_MESSAGING_SENDER_ID',
+  ];
+  return {
+    'APP_ENV': env,
+    for (final key in firebaseKeys)
+      if (environment[key]?.isNotEmpty == true) key: environment[key]!,
+  };
 }
 
 String _getTargets(String platform, String arch, String? customTargets) {

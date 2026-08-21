@@ -5,6 +5,8 @@ import 'package:dio/dio.dart';
 import 'package:fl_clash/common/loom_auth.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+const _deviceCredential = 'abcdefghijklmnopqrstuvwxyz0123456789ABCDEFG';
+
 void main() {
   test('Telegram approval returns the current device Mihomo URL', () async {
     final requests = <RequestOptions>[];
@@ -36,6 +38,7 @@ void main() {
       appVersion: '1.0.0',
       appBuild: '16',
       dio: dio,
+      deviceCredential: () async => _deviceCredential,
     );
     const installationId = '65af74c6-40f7-46b7-936b-724256aff099';
 
@@ -48,6 +51,10 @@ void main() {
     expect(activation?.subscriptionUrl, 'https://lmvn.pro/Ab3dE/mihomo');
     expect(requests.first.data, containsPair('device_key', installationId));
     expect(requests.first.data, containsPair('platform', 'windows'));
+    expect(
+      requests.first.data,
+      containsPair('device_credential', _deviceCredential),
+    );
     expect(requests.last.data, {'public_token': challenge.publicToken});
   });
 
@@ -86,6 +93,7 @@ void main() {
       appVersion: '1.0.0',
       appBuild: '15',
       dio: dio,
+      deviceCredential: () async => _deviceCredential,
     );
 
     final challenge = await client.requestCode(' USER@Example.com ');
@@ -102,6 +110,10 @@ void main() {
     expect(
       requests[3].data,
       containsPair('device_key', '65af74c6-40f7-46b7-936b-724256aff099'),
+    );
+    expect(
+      requests[3].data,
+      containsPair('device_credential', _deviceCredential),
     );
   });
 
