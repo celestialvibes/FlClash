@@ -173,10 +173,15 @@ extension ProfileExtension on Profile {
   }
 
   Future<Profile> update() async {
-    final response = await request.getFileResponseForUrl(url);
+    final subscriptionUrl = url.trim();
+    if (!isLoomSubscriptionUrl(subscriptionUrl)) {
+      throw const FormatException('Only LOOM subscription links are supported');
+    }
+    final response = await request.getFileResponseForUrl(subscriptionUrl);
     final disposition = response.headers.value('content-disposition');
     final userinfo = response.headers.value('subscription-userinfo');
     return copyWith(
+      url: subscriptionUrl,
       label: label.takeFirstValid([
         utils.getFileNameForDisposition(disposition),
         id.toString(),

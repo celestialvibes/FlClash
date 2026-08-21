@@ -22,8 +22,8 @@ class DashboardView extends ConsumerWidget {
           if (value == null || value.isEmpty) {
             return appLocalizations.emptyTip('').trim();
           }
-          if (!value.isUrl) {
-            return appLocalizations.urlTip('').trim();
+          if (!isLoomSubscriptionUrl(value)) {
+            return 'Введите ссылку подписки LOOM';
           }
           return null;
         },

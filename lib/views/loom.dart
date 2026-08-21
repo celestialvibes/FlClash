@@ -283,7 +283,9 @@ Future<void> _importSubscription(BuildContext context) async {
         inputFormatters: TextInputLimits.limit(TextInputLimits.url),
         validator: (value) {
           if (value == null || value.isEmpty) return 'Введите ссылку';
-          if (!value.isUrl) return 'Проверьте ссылку';
+          if (!isLoomSubscriptionUrl(value)) {
+            return 'Введите ссылку подписки LOOM';
+          }
           return null;
         },
       ),
@@ -1373,11 +1375,8 @@ class _LoomSupportViewState extends ConsumerState<LoomSupportView>
           value: value,
           inputFormatters: TextInputLimits.limit(TextInputLimits.url),
           validator: (value) {
-            final uri = Uri.tryParse(value?.trim() ?? '');
-            if (uri == null ||
-                !const {'http', 'https'}.contains(uri.scheme) ||
-                uri.host.isEmpty) {
-              return 'Введите ссылку http или https';
+            if (!isLoomSubscriptionUrl(value ?? '')) {
+              return 'Введите ссылку подписки LOOM';
             }
             return null;
           },

@@ -191,6 +191,9 @@ jobs:
       - name: Install dependencies
         run: flutter pub get
 
+      - name: Test deeplink contract
+        run: flutter test test/common/link_test.dart test/common/protocol_test.dart
+
       - name: Build portable x64 package
         run: dart setup.dart windows --env stable --targets zip
 

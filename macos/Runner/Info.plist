@@ -27,7 +27,7 @@
 			<string></string>
 			<key>CFBundleURLSchemes</key>
 			<array>
-				<string>loomhost</string>
+				<string>loomvpn</string>
 			</array>
 		</dict>
 	</array>

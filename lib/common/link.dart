@@ -6,6 +6,19 @@ import 'print.dart';
 
 typedef InstallConfigCallBack = void Function(String url);
 
+const _loomSubscriptionHosts = {'lmvn.pro', 'loomvpn.pro', 'loomhost.ru'};
+
+bool isLoomSubscriptionUrl(String value) {
+  final uri = Uri.tryParse(value.trim());
+  if (uri == null || uri.scheme != 'https' || uri.userInfo.isNotEmpty) {
+    return false;
+  }
+  final host = uri.host.toLowerCase();
+  return _loomSubscriptionHosts.any(
+    (root) => host == root || host.endsWith('.$root'),
+  );
+}
+
 class LinkManager {
   static LinkManager? _instance;
   late AppLinks _appLinks;
@@ -22,22 +35,19 @@ class LinkManager {
     destroy();
     subscription = _appLinks.uriLinkStream.listen((uri) {
       commonPrint.log('onAppLink: $uri');
-      final url = extractInstallConfigUrl(uri);
+      final url = extractAddUrl(uri);
       if (url != null) {
         installConfigCallBack(url);
       }
     });
   }
 
-  static String? extractInstallConfigUrl(Uri uri) {
-    if (uri.scheme != 'loomhost' || uri.host != 'install-config') {
+  static String? extractAddUrl(Uri uri) {
+    if (uri.scheme != 'loomvpn' || uri.host != 'add') {
       return null;
     }
     final value = uri.queryParameters['url'];
-    final url = value == null ? null : Uri.tryParse(value);
-    if (url == null ||
-        (url.scheme != 'http' && url.scheme != 'https') ||
-        url.host.isEmpty) {
+    if (value == null || !isLoomSubscriptionUrl(value)) {
       return null;
     }
     return value;

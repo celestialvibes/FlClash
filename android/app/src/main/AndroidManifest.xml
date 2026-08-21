@@ -60,9 +60,9 @@
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />
 
-                <data android:scheme="loomhost" />
+                <data android:scheme="loomvpn" />
 
-                <data android:host="install-config" />
+                <data android:host="add" />
             </intent-filter>
         </activity>
 

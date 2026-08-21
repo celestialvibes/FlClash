@@ -22,9 +22,7 @@ class Window {
       exit(0);
     }
     if (system.isWindows) {
-      protocol.register('clash');
-      protocol.register('clashmeta');
-      protocol.register('flclash');
+      protocol.register('loomvpn');
     }
     await windowManager.ensureInitialized();
     final WindowOptions windowOptions = WindowOptions(
