@@ -143,13 +143,14 @@ class ApplicationState extends ConsumerState<Application> {
 
   void _initLink() {
     linkManager.initAppLinksListen((url) async {
+      final source = Uri.parse(url).host;
       final res = await globalState.showMessage(
         title: currentAppLocalizations.addProfile,
         message: TextSpan(
           children: [
             TextSpan(text: currentAppLocalizations.doYouWantToPass),
             TextSpan(
-              text: ' $url ',
+              text: ' $source ',
               style: TextStyle(
                 color: context.colorScheme.primary,
                 decoration: TextDecoration.underline,

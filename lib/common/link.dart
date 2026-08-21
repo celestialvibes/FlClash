@@ -34,7 +34,7 @@ class LinkManager {
     commonPrint.log('initAppLinksListen');
     destroy();
     subscription = _appLinks.uriLinkStream.listen((uri) {
-      commonPrint.log('onAppLink: $uri');
+      commonPrint.log('onAppLink received');
       final url = extractAddUrl(uri);
       if (url != null) {
         installConfigCallBack(url);
