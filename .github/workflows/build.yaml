@@ -2,6 +2,16 @@ name: build
 
 on:
   workflow_dispatch:
+    inputs:
+      platform:
+        description: Build platform
+        required: true
+        default: all
+        type: choice
+        options:
+          - all
+          - macos
+          - windows
   push:
     branches:
       - loom
@@ -13,6 +23,7 @@ env:
 
 jobs:
   test:
+    if: github.event_name != 'workflow_dispatch' || inputs.platform == 'all'
     name: Test
     runs-on: ubuntu-latest
     steps:
@@ -93,6 +104,7 @@ jobs:
           cargo test --manifest-path plugins/rust_api/rust/Cargo.toml
 
   build:
+    if: github.event_name != 'workflow_dispatch' || inputs.platform != 'windows'
     runs-on: macos-latest
 
     steps:
@@ -154,6 +166,7 @@ jobs:
           overwrite: true
 
   build-windows:
+    if: github.event_name != 'workflow_dispatch' || inputs.platform != 'macos'
     runs-on: windows-latest
 
     steps:
@@ -195,7 +208,7 @@ jobs:
           overwrite: true
 
   release:
-    if: startsWith(github.ref, 'refs/tags/v')
+    if: startsWith(github.ref, 'refs/tags/v') && (github.event_name != 'workflow_dispatch' || inputs.platform == 'all')
     permissions:
       contents: write
     needs: [ test, build, build-windows ]
