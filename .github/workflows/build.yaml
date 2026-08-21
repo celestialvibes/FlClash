@@ -188,6 +188,9 @@ jobs:
           flutter-version: ${{ env.FLUTTER_VERSION }}
           cache: true
 
+      - name: Install dependencies
+        run: flutter pub get
+
       - name: Build portable x64 package
         run: dart setup.dart windows --env stable --targets zip
 
