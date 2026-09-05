@@ -194,12 +194,14 @@ jobs:
       - name: Test changed UI contracts
         run: flutter test test/common/link_test.dart test/common/protocol_test.dart test/loom_brand_test.dart test/pages/home_test.dart
 
-      - name: Build portable x64 package
-        run: dart setup.dart windows --env stable --targets zip
+      - name: Build Windows x64 packages
+        run: dart setup.dart windows --env stable --targets exe,zip
 
       - name: Verify Windows package
         shell: pwsh
         run: |
+          $installer = Get-ChildItem dist/*.exe
+          if ($installer.Count -ne 1) { throw "Expected exactly one Windows installer" }
           $zip = Get-ChildItem dist/*.zip
           if ($zip.Count -ne 1) { throw "Expected exactly one Windows zip" }
           Expand-Archive $zip.FullName build/windows-verify

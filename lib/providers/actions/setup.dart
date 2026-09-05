@@ -20,7 +20,9 @@ class SetupAction extends _$SetupAction {
   bool get _isRunning => _startTime != null && _startTime!.isBeforeNow;
 
   @override
-  void build() {}
+  void build() {
+    ref.onDispose(() => _runtimeTimer?.cancel());
+  }
 
   SetupParams get _setupParams {
     final selectedMap = ref.read(selectedMapProvider);
@@ -183,6 +185,19 @@ class SetupAction extends _$SetupAction {
   }
 
   bool _isCurrent(_RunRequest request) => identical(_latestRunRequest, request);
+
+  Future<void> syncListenerState() {
+    final request = _latestRunRequest;
+    return _listenerScheduler.run(() async {
+      if (request == null ||
+          !_isCurrent(request) ||
+          !request.running ||
+          !ref.read(isStartProvider)) {
+        return;
+      }
+      await setCoreRunning(!ref.read(suspendProvider));
+    });
+  }
 
   Future<void> updateConfigDebounce() async {
     debouncer.call(FunctionTag.updateConfig, updateConfig);
@@ -405,12 +420,28 @@ class SetupAction extends _$SetupAction {
     Future<void> Function()? preloadInvoke,
     FutureOr Function()? onUpdated,
   }) async {
-    var profile = ref.read(currentProfileProvider);
-    final nextProfile = await profile?.checkAndUpdateAndCopy();
-    if (nextProfile != null) {
-      profile = nextProfile;
-      ref.read(profilesProvider.notifier).put(nextProfile);
+    final profileId = ref.read(currentProfileIdProvider);
+    if (profileId != null) {
+      await ref.read(profilesActionProvider.notifier).mutateProfile(profileId, (
+        current,
+      ) async {
+        final next = await current.checkAndUpdateAndCopy();
+        if (next != null && ref.mounted) {
+          final latest = ref.read(profilesProvider).getProfile(profileId);
+          if (latest != null) {
+            ref
+                .read(profilesProvider.notifier)
+                .put(
+                  latest.copyWith(
+                    subscriptionInfo: next.subscriptionInfo,
+                    lastUpdateDate: next.lastUpdateDate,
+                  ),
+                );
+          }
+        }
+      });
     }
+    final profile = ref.read(currentProfileProvider);
     commonPrint.log('setup ===> ${profile?.realLabel}');
     final patchConfig = ref.read(patchClashConfigProvider);
     final shouldContinueSetup = await requestAdmin(patchConfig.tun.enable);

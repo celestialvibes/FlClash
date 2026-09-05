@@ -2,6 +2,8 @@ part of '../action.dart';
 
 @Riverpod(keepAlive: true)
 class CommonAction extends _$CommonAction {
+  bool _updatingTraffic = false;
+
   @override
   void build() {}
 
@@ -25,19 +27,34 @@ class CommonAction extends _$CommonAction {
   }
 
   Future<void> updateTraffic() async {
+    if (_updatingTraffic) return;
+    _updatingTraffic = true;
+    final setup = ref.read(setupActionProvider.notifier);
+    final request = setup._latestRunRequest;
+    bool isCurrent() =>
+        ref.mounted &&
+        request != null &&
+        setup._isCurrent(request) &&
+        ref.read(isStartProvider);
     final onlyStatisticsProxy = ref.read(
       appSettingProvider.select((state) => state.onlyStatisticsProxy),
     );
     try {
       final traffic = await coreController.getTraffic(onlyStatisticsProxy);
+      if (!isCurrent()) return;
+      final totalTraffic = await coreController.getTotalTraffic(
+        onlyStatisticsProxy,
+      );
+      if (!isCurrent()) return;
       ref.read(trafficsProvider.notifier).addTraffic(traffic);
-      ref.read(totalTrafficProvider.notifier).value = await coreController
-          .getTotalTraffic(onlyStatisticsProxy);
+      ref.read(totalTrafficProvider.notifier).value = totalTraffic;
     } catch (error) {
       commonPrint.log(
         'updateTraffic error: $error',
         logLevel: coreFailureLogLevel(error),
       );
+    } finally {
+      _updatingTraffic = false;
     }
   }
 

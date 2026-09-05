@@ -4768,6 +4768,56 @@ class AppLocalizations {
       args: [],
     );
   }
+
+  /// `This subscription link is invalid or has been revoked. Get a new link from loomvpn.pro.`
+  String get loomSubscriptionInvalidLink {
+    return Intl.message(
+      'This subscription link is invalid or has been revoked. Get a new link from loomvpn.pro.',
+      name: 'loomSubscriptionInvalidLink',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Access to this subscription was denied. Check your device and plan at loomvpn.pro.`
+  String get loomSubscriptionDenied {
+    return Intl.message(
+      'Access to this subscription was denied. Check your device and plan at loomvpn.pro.',
+      name: 'loomSubscriptionDenied',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `The subscription server is temporarily unavailable. Try again later.`
+  String get loomSubscriptionUnavailable {
+    return Intl.message(
+      'The subscription server is temporarily unavailable. Try again later.',
+      name: 'loomSubscriptionUnavailable',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `The subscription server did not respond in time. Check your connection and try again.`
+  String get loomSubscriptionTimeout {
+    return Intl.message(
+      'The subscription server did not respond in time. Check your connection and try again.',
+      name: 'loomSubscriptionTimeout',
+      desc: '',
+      args: [],
+    );
+  }
+
+  /// `Your subscription has expired. Renew it at loomvpn.pro, then refresh the subscription.`
+  String get loomSubscriptionExpired {
+    return Intl.message(
+      'Your subscription has expired. Renew it at loomvpn.pro, then refresh the subscription.',
+      name: 'loomSubscriptionExpired',
+      desc: '',
+      args: [],
+    );
+  }
 }
 
 class AppLocalizationDelegate extends LocalizationsDelegate<AppLocalizations> {

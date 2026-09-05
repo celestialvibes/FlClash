@@ -122,12 +122,14 @@ class LoomAuthClient {
   }
 
   Future<LoomActivation?> pollTelegramLogin(
-    LoomTelegramChallenge challenge,
-  ) async {
+    LoomTelegramChallenge challenge, {
+    CancelToken? cancelToken,
+  }) async {
     try {
       final response = await _dio.post<Object?>(
         loomSupportApiUri.resolve('/api/v1/auth/telegram/status').toString(),
         data: {'public_token': challenge.publicToken},
+        cancelToken: cancelToken,
       );
       final data = _map(response.data);
       switch (data['status']) {

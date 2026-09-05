@@ -5,6 +5,7 @@ import 'dart:io';
 
 import 'package:collection/collection.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
+import 'package:dio/dio.dart' show CancelToken;
 import 'package:fl_clash/common/common.dart';
 import 'package:fl_clash/common/loom_auth.dart';
 import 'package:fl_clash/common/loom_diagnostics.dart';
@@ -152,7 +153,7 @@ LoomDiagnosticExpiry _loomSubscriptionExpiry(Profile? profile) {
   final expire = profile?.subscriptionInfo?.expire ?? 0;
   if (expire <= 0) return LoomDiagnosticExpiry.unknown;
   final remaining = expire - DateTime.now().millisecondsSinceEpoch ~/ 1000;
-  if (remaining < 0) return LoomDiagnosticExpiry.expired;
+  if (remaining <= 0) return LoomDiagnosticExpiry.expired;
   if (remaining <= const Duration(days: 3).inSeconds) {
     return LoomDiagnosticExpiry.soon;
   }
@@ -274,16 +275,22 @@ Proxy? _watchSelectedProxy(WidgetRef ref, Group? group) {
 
 Future<bool> _installLoomSubscription(BuildContext context, String url) async {
   while (true) {
+    Object? failure;
     final imported = await globalState.container
         .read(profilesActionProvider.notifier)
-        .addProfileFormURL(url, showError: false);
+        .addProfileFormURL(
+          url,
+          showError: false,
+          onError: (error) => failure = error,
+        );
     if (imported) return true;
     if (!context.mounted) return false;
     final retry = await globalState.showMessage(
       title: 'Не удалось добавить подписку',
-      message: const TextSpan(
-        text:
-            'Проверьте интернет и ссылку. Если подписка истекла, получите новую на loomvpn.pro.',
+      message: TextSpan(
+        text: failure is SubscriptionDownloadException
+            ? failure.toString()
+            : currentAppLocalizations.loomAuthInvalidResponse,
       ),
       confirmText: 'Попробовать снова',
     );
@@ -423,37 +430,53 @@ class _LoomTelegramLoginDialog extends StatefulWidget {
 
 class _LoomTelegramLoginDialogState extends State<_LoomTelegramLoginDialog> {
   LoomAuthFailure? _failure;
+  final _cancelToken = CancelToken();
+  Timer? _deadlineTimer;
 
   @override
   void initState() {
     super.initState();
+    _deadlineTimer = Timer(
+      Duration(seconds: widget.challenge.expiresInSeconds),
+      () {
+        _cancelToken.cancel();
+        if (mounted) {
+          setState(() => _failure = LoomAuthFailure.authorizationExpired);
+        }
+      },
+    );
     unawaited(_poll());
   }
 
+  @override
+  void dispose() {
+    _deadlineTimer?.cancel();
+    _cancelToken.cancel();
+    super.dispose();
+  }
+
   Future<void> _poll() async {
-    final deadline = DateTime.now().add(
-      Duration(seconds: widget.challenge.expiresInSeconds),
-    );
-    while (mounted && DateTime.now().isBefore(deadline)) {
+    while (mounted && !_cancelToken.isCancelled) {
       try {
         final activation = await widget.client.pollTelegramLogin(
           widget.challenge,
+          cancelToken: _cancelToken,
         );
-        if (!mounted) return;
+        if (!mounted || _cancelToken.isCancelled) return;
         if (activation != null) {
+          _deadlineTimer?.cancel();
           Navigator.of(context).pop(activation);
           return;
         }
       } on LoomAuthException catch (error) {
+        if (!mounted || _cancelToken.isCancelled) return;
         if (error.failure != LoomAuthFailure.network) {
+          _deadlineTimer?.cancel();
           setState(() => _failure = error.failure);
           return;
         }
       }
       await Future<void>.delayed(const Duration(seconds: 2));
-    }
-    if (mounted) {
-      setState(() => _failure = LoomAuthFailure.authorizationExpired);
     }
   }
 
@@ -1519,11 +1542,14 @@ class _LoomSupportViewState extends ConsumerState<LoomSupportView>
             logLevel: LogLevel.warning,
           );
         }
+        if (!isCurrent()) return;
         _directRuleReady = true;
       }
       if (!_ready) {
         final credential = await _client.ensureOpenThread();
+        if (!isCurrent()) return;
         await loomSupportInbox.activate(credential.supportId);
+        if (!isCurrent()) return;
         _ready = true;
       }
       var supportId = _client.credential!.supportId;
@@ -1538,6 +1564,7 @@ class _LoomSupportViewState extends ConsumerState<LoomSupportView>
       if (!isCurrent()) return;
       if (messages.any((message) => message.eventKind == 'thread_closed_v1')) {
         await _client.ensureOpenThread();
+        if (!isCurrent()) return;
       }
       setState(() {
         if (identityChanged) {
@@ -1794,43 +1821,51 @@ class _LoomSupportViewState extends ConsumerState<LoomSupportView>
     Profile current,
     _LoomPreparedSubscription prepared,
   ) async {
-    final targetPath = await appPath.getProfilePath(current.id.toString());
-    final candidatePath = await appPath.getProfilePath(
-      prepared.candidate.id.toString(),
+    final ref = globalState.container;
+    final candidate = File(
+      await appPath.getProfilePath(prepared.candidate.id.toString()),
     );
-    final staged = File('$targetPath.loom-replacement');
-    final backup = File('$targetPath.loom-backup');
-    final target = File(targetPath);
-    final replacement = current.copyWith(
-      url: prepared.candidate.url,
-      lastUpdateDate: prepared.candidate.lastUpdateDate,
-      subscriptionInfo: prepared.candidate.subscriptionInfo,
-    );
-    await File(candidatePath).copy(staged.path);
-    if (await target.exists()) await target.copy(backup.path);
     try {
-      await staged.rename(targetPath);
-      await database.profilesDao.putAll([replacement.toCompanion()]);
-      ref.read(profilesProvider.notifier).put(replacement);
+      await ref.read(profilesActionProvider.notifier).mutateProfile(
+        current.id,
+        (current) async {
+          final target = File(
+            await appPath.getProfilePath(current.id.toString()),
+          );
+          final directory = await target.parent.createTemp(
+            '.loom-replacement-',
+          );
+          final staged = File('${directory.path}/config');
+          final backup = File('${directory.path}/backup');
+          final replacement = current.copyWith(
+            url: prepared.candidate.url,
+            lastUpdateDate: prepared.candidate.lastUpdateDate,
+            subscriptionInfo: prepared.candidate.subscriptionInfo,
+          );
+          try {
+            await candidate.copy(staged.path);
+            if (await target.exists()) await target.copy(backup.path);
+            try {
+              await staged.rename(target.path);
+              await database.profilesDao.putAll([replacement.toCompanion()]);
+              ref.read(profilesProvider.notifier).put(replacement);
+            } catch (_) {
+              if (await backup.exists()) await backup.rename(target.path);
+              await database.profilesDao.putAll([current.toCompanion()]);
+              ref.read(profilesProvider.notifier).put(current);
+              rethrow;
+            }
+          } finally {
+            await directory.delete(recursive: true);
+          }
+        },
+      );
       ref.invalidate(setupStateProvider(current.id));
       await ref
           .read(setupActionProvider.notifier)
           .applyProfile(force: true, silence: true);
-    } catch (_) {
-      if (await backup.exists()) await backup.copy(targetPath);
-      await database.profilesDao.putAll([current.toCompanion()]);
-      ref.read(profilesProvider.notifier).put(current);
-      ref.invalidate(setupStateProvider(current.id));
-      try {
-        await ref
-            .read(setupActionProvider.notifier)
-            .applyProfile(force: true, silence: true);
-      } catch (_) {}
-      rethrow;
     } finally {
-      await staged.safeDelete();
-      await backup.safeDelete();
-      await File(candidatePath).safeDelete();
+      await candidate.safeDelete();
     }
   }
 
@@ -1965,9 +2000,13 @@ class _LoomSupportViewState extends ConsumerState<LoomSupportView>
           await _openScreen(message.actionPayload['screen'] as String);
           break;
       }
-    } catch (_) {
+    } catch (error) {
       if (mounted) {
-        setState(() => _error = 'Действие не выполнено. Попробуйте ещё раз');
+        setState(
+          () => _error = error is SubscriptionDownloadException
+              ? error.toString()
+              : 'Действие не выполнено. Попробуйте ещё раз',
+        );
       }
     } finally {
       if (preparedSubscription != null) {
@@ -2083,8 +2122,14 @@ class _LoomSupportViewState extends ConsumerState<LoomSupportView>
             .updateProfile(profile, showLoading: true);
         globalState.showNotifier('Подписка обновлена');
       }
-    } catch (_) {
-      if (mounted) setState(() => _error = 'Не удалось обновить подписку');
+    } catch (error) {
+      if (mounted) {
+        setState(
+          () => _error = error is SubscriptionDownloadException
+              ? error.toString()
+              : 'Не удалось обновить подписку',
+        );
+      }
     } finally {
       if (mounted) setState(() => _busyActionId = null);
     }
@@ -2387,6 +2432,8 @@ class LoomSubscriptionView extends ConsumerWidget {
     final profile = ref.watch(currentProfileProvider);
     final info = profile?.subscriptionInfo;
     final used = (info?.upload ?? 0) + (info?.download ?? 0);
+    final expired =
+        _loomSubscriptionExpiry(profile) == LoomDiagnosticExpiry.expired;
     final expires = info?.expire != null && info!.expire > 0
         ? DateFormat(
             'dd.MM.yyyy',
@@ -2419,8 +2466,13 @@ class LoomSubscriptionView extends ConsumerWidget {
                   ),
                   const SizedBox(height: 5),
                   Text(
-                    'Действует до $expires',
-                    style: const TextStyle(color: loomSuccess, fontSize: 12),
+                    expired
+                        ? context.appLocalizations.loomSubscriptionExpired
+                        : 'Действует до $expires',
+                    style: TextStyle(
+                      color: expired ? context.colorScheme.error : loomSuccess,
+                      fontSize: 12,
+                    ),
                   ),
                   const SizedBox(height: 20),
                   LoomValueRow(
@@ -2453,9 +2505,11 @@ class LoomSubscriptionView extends ConsumerWidget {
                 children: [
                   LoomSettingsRow(
                     label: 'Обновить подписку',
-                    onTap: () => ref
-                        .read(profilesActionProvider.notifier)
-                        .updateProfile(profile, showLoading: true),
+                    onTap: () => globalState.safeRun(
+                      () => ref
+                          .read(profilesActionProvider.notifier)
+                          .updateProfile(profile, showLoading: true),
+                    ),
                   ),
                   const Divider(height: 1),
                   LoomSettingsRow(

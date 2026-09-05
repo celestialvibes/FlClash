@@ -478,6 +478,21 @@ class MessageLookup extends MessageLookupByLibrary {
       "サブスクリプションを手動入力",
     ),
     "loomNeedHelp": MessageLookupByLibrary.simpleMessage("お困りですか？"),
+    "loomSubscriptionDenied": MessageLookupByLibrary.simpleMessage(
+      "購読へのアクセスが拒否されました。loomvpn.pro でデバイスとプランを確認してください。",
+    ),
+    "loomSubscriptionExpired": MessageLookupByLibrary.simpleMessage(
+      "購読の有効期限が切れました。loomvpn.pro で延長してから、購読を更新してください。",
+    ),
+    "loomSubscriptionInvalidLink": MessageLookupByLibrary.simpleMessage(
+      "購読リンクが無効か、取り消されています。loomvpn.pro で新しいリンクを取得してください。",
+    ),
+    "loomSubscriptionTimeout": MessageLookupByLibrary.simpleMessage(
+      "購読サーバーの応答がタイムアウトしました。接続を確認して、もう一度お試しください。",
+    ),
+    "loomSubscriptionUnavailable": MessageLookupByLibrary.simpleMessage(
+      "購読サーバーは一時的に利用できません。後でもう一度お試しください。",
+    ),
     "loomTelegramExpired": MessageLookupByLibrary.simpleMessage(
       "確認の有効期限が切れました。もう一度ログインしてください。",
     ),

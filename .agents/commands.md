@@ -144,7 +144,7 @@ emulator validation; Kotlin compilation cannot prove those system callbacks.
 
 ## Verify
 
-The tag-triggered release workflow runs these root-package checks in order:
+The build workflow runs these root-package checks in order:
 
 ```bash
 flutter pub get
@@ -154,7 +154,9 @@ flutter test --reporter expanded
 
 Run `flutter analyze` locally before committing when practical.
 
-The workflow runs only for `v*` tag pushes; pull requests do not trigger it.
+The workflow runs on pushes to `loom`, `v*` tag pushes, and manual dispatch.
+Manual dispatch with `platform: all` runs the main checks; platform-only macOS
+and Windows dispatches skip the main test job. Pull requests do not trigger it.
 Root analysis excludes `plugins/**`, and root tests do not discover nested
 plugin packages, so CI also validates local Flutter packages, the setup build
 tool, the Go wrapper, and Rust components from their own package directories. A

@@ -8,6 +8,38 @@ import 'package:flutter_test/flutter_test.dart';
 const _deviceCredential = 'abcdefghijklmnopqrstuvwxyz0123456789ABCDEFG';
 
 void main() {
+  test('cancelled Telegram polling does not send a request', () async {
+    final dio = Dio();
+    dio.httpClientAdapter = _ResponseAdapter((_) {
+      fail('cancelled poll reached the transport');
+    });
+    final client = LoomAuthClient(
+      platform: 'macos',
+      appVersion: '1.0.0',
+      appBuild: '22',
+      dio: dio,
+    );
+    final cancelToken = CancelToken()..cancel();
+
+    await expectLater(
+      client.pollTelegramLogin(
+        const LoomTelegramChallenge(
+          publicToken: 'aBcDeFgHiJkLmNoPqRsTuVwXyZ012345',
+          authorizationUrl: 'https://oauth.telegram.org/auth',
+          expiresInSeconds: 300,
+        ),
+        cancelToken: cancelToken,
+      ),
+      throwsA(
+        isA<LoomAuthException>().having(
+          (error) => error.failure,
+          'failure',
+          LoomAuthFailure.network,
+        ),
+      ),
+    );
+  });
+
   test('Telegram approval returns the current device Mihomo URL', () async {
     final requests = <RequestOptions>[];
     var statusCalls = 0;

@@ -602,6 +602,21 @@ class MessageLookup extends MessageLookupByLibrary {
       "Enter subscription manually",
     ),
     "loomNeedHelp": MessageLookupByLibrary.simpleMessage("Need help?"),
+    "loomSubscriptionDenied": MessageLookupByLibrary.simpleMessage(
+      "Access to this subscription was denied. Check your device and plan at loomvpn.pro.",
+    ),
+    "loomSubscriptionExpired": MessageLookupByLibrary.simpleMessage(
+      "Your subscription has expired. Renew it at loomvpn.pro, then refresh the subscription.",
+    ),
+    "loomSubscriptionInvalidLink": MessageLookupByLibrary.simpleMessage(
+      "This subscription link is invalid or has been revoked. Get a new link from loomvpn.pro.",
+    ),
+    "loomSubscriptionTimeout": MessageLookupByLibrary.simpleMessage(
+      "The subscription server did not respond in time. Check your connection and try again.",
+    ),
+    "loomSubscriptionUnavailable": MessageLookupByLibrary.simpleMessage(
+      "The subscription server is temporarily unavailable. Try again later.",
+    ),
     "loomTelegramExpired": MessageLookupByLibrary.simpleMessage(
       "Confirmation expired. Start signing in again.",
     ),

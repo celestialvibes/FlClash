@@ -578,5 +578,10 @@
   "loomAuthRateLimited": "Too many attempts. Please try again later.",
   "loomAuthSubscriptionMissing": "No active LOOM subscription was found for this email.",
   "loomAuthDeviceLimit": "The device limit has been reached. Remove an old device on loomvpn.pro and try again.",
-  "loomAuthInvalidResponse": "LOOM returned an unexpected response. Please try again later."
+  "loomAuthInvalidResponse": "LOOM returned an unexpected response. Please try again later.",
+  "loomSubscriptionInvalidLink": "This subscription link is invalid or has been revoked. Get a new link from loomvpn.pro.",
+  "loomSubscriptionDenied": "Access to this subscription was denied. Check your device and plan at loomvpn.pro.",
+  "loomSubscriptionUnavailable": "The subscription server is temporarily unavailable. Try again later.",
+  "loomSubscriptionTimeout": "The subscription server did not respond in time. Check your connection and try again.",
+  "loomSubscriptionExpired": "Your subscription has expired. Renew it at loomvpn.pro, then refresh the subscription."
 }

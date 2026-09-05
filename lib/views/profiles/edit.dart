@@ -82,14 +82,25 @@ class _EditProfileViewState extends State<EditProfileView> {
           profile = profile.copyWith(autoUpdate: false);
         }
       }
-      profilesAction.putProfile(await profile.saveFile(_fileData!));
+      final bytes = _fileData!;
+      await profilesAction.mutateProfile(profile.id, (current) async {
+        final saved = await current
+            .copyWith(
+              url: profile.url,
+              label: profile.label,
+              autoUpdate: profile.autoUpdate,
+              autoUpdateDuration: profile.autoUpdateDuration,
+            )
+            .saveFile(bytes);
+        profilesAction.putProfile(saved);
+      });
     } else if (!hasUpdate) {
       profilesAction.putProfile(profile);
     } else {
       globalState.safeRun(() async {
         await Future.delayed(commonDuration);
         if (hasUpdate) {
-          await profilesAction.updateProfile(profile);
+          await profilesAction.updateProfile(profile, updateMetadata: true);
         }
       });
     }

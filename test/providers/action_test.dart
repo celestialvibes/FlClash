@@ -1,6 +1,8 @@
 import 'dart:async';
 
+import 'package:fl_clash/core/controller.dart';
 import 'package:fl_clash/core/desktop/model.dart';
+import 'package:fl_clash/core/interface.dart';
 import 'package:fl_clash/enum/enum.dart';
 import 'package:fl_clash/models/models.dart';
 import 'package:fl_clash/providers/action.dart';
@@ -9,12 +11,113 @@ import 'package:fl_clash/providers/config.dart';
 import 'package:fl_clash/providers/database.dart';
 import 'package:fl_clash/providers/state.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:mocktail/mocktail.dart';
 import 'package:riverpod/riverpod.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
+  testWidgets('traffic polling is single-flight and ends with its provider', (
+    tester,
+  ) async {
+    final core = _TrafficCore();
+    final response = Completer<Traffic>();
+    when(() => core.getTraffic(any())).thenAnswer((_) => response.future);
+    when(
+      () => core.getTotalTraffic(any()),
+    ).thenAnswer((_) async => const Traffic(down: 20));
+    CoreController.test(core);
+    addTearDown(CoreController.resetInstance);
+    final container = ProviderContainer(
+      overrides: [
+        initProvider.overrideWithBuild((_, _) => true),
+        setupActionProvider.overrideWith(_RaceSetupAction.new),
+      ],
+    );
+    final setup = container.read(setupActionProvider.notifier);
+    final common = container.read(commonActionProvider.notifier);
+    await setup.setRunning(true);
+    await common.updateTraffic();
+    verify(() => core.getTraffic(any())).called(1);
+
+    await setup.setRunning(false);
+    await setup.setRunning(true);
+    response.complete(const Traffic(down: 10));
+    await tester.pump();
+    verifyNever(() => core.getTotalTraffic(any()));
+    expect(container.read(totalTrafficProvider), const Traffic());
+
+    await common.updateTraffic();
+    expect(container.read(totalTrafficProvider), const Traffic(down: 20));
+    verify(() => core.getTraffic(any())).called(1);
+    container.dispose();
+    await tester.pump(const Duration(seconds: 3));
+    verifyNever(() => core.getTraffic(any()));
+  });
+
   group('ProfilesAction', () {
+    test('refresh and deletion cannot resurrect a profile', () async {
+      final original = Profile.normal(url: 'https://lmvn.pro/old');
+      final action = _PendingProfileAction();
+      final container = ProviderContainer(
+        overrides: [
+          currentProfileIdProvider.overrideWithBuild((_, _) => null),
+          profilesProvider.overrideWith(() => _TestProfiles([original])),
+          profilesActionProvider.overrideWith(() => action),
+        ],
+      );
+      addTearDown(container.dispose);
+      final update = container
+          .read(profilesActionProvider.notifier)
+          .updateProfile(original);
+      await Future<void>.delayed(Duration.zero);
+      final deletion = action.deleteProfile(original.id);
+      final staleUpdate = expectLater(
+        action.updateProfile(original),
+        throwsStateError,
+      );
+      action.response.complete(original);
+      await Future.wait([update, deletion, staleUpdate]);
+      expect(container.read(profilesProvider), isEmpty);
+      expect(action.downloads, [original.url]);
+    });
+
+    test(
+      'a queued refresh uses the replacement URL and preserves selection',
+      () async {
+        final original = Profile.normal(url: 'https://lmvn.pro/old');
+        final action = _PendingProfileAction();
+        final container = ProviderContainer(
+          overrides: [
+            currentProfileIdProvider.overrideWithBuild((_, _) => null),
+            profilesProvider.overrideWith(() => _TestProfiles([original])),
+            profilesActionProvider.overrideWith(() => action),
+          ],
+        );
+        addTearDown(container.dispose);
+        container.read(profilesActionProvider);
+        final update = action.updateProfile(original);
+        await Future<void>.delayed(Duration.zero);
+        final replacement = action.mutateProfile(original.id, (current) async {
+          container
+              .read(profilesProvider.notifier)
+              .put(
+                current.copyWith(
+                  url: 'https://lmvn.pro/new',
+                  selectedMap: {'LOOM': 'chosen'},
+                ),
+              );
+        });
+        final refresh = action.updateProfile(original);
+        action.response.complete(original);
+        await Future.wait([update, replacement, refresh]);
+        final latest = container.read(profilesProvider).single;
+        expect(action.downloads, [original.url, 'https://lmvn.pro/new']);
+        expect(latest.url, 'https://lmvn.pro/new');
+        expect(latest.selectedMap, {'LOOM': 'chosen'});
+      },
+    );
+
     test('keeps edited profile data when remote update fails', () async {
       final original = Profile.normal(label: 'old label', url: 'bad-url');
       final edited = original.copyWith(
@@ -35,7 +138,9 @@ void main() {
       );
 
       await expectLater(
-        container.read(profilesActionProvider.notifier).updateProfile(edited),
+        container
+            .read(profilesActionProvider.notifier)
+            .updateProfile(edited, updateMetadata: true),
         throwsA(anything),
       );
 
@@ -57,11 +162,17 @@ void main() {
       );
       addTearDown(container.dispose);
 
+      Object? failure;
       final imported = await container
           .read(profilesActionProvider.notifier)
-          .addProfileFormURL('bad-url', showError: false);
+          .addProfileFormURL(
+            'bad-url',
+            showError: false,
+            onError: (error) => failure = error,
+          );
 
       expect(imported, isFalse);
+      expect(failure, isA<FormatException>());
       expect(container.read(profilesProvider).single, original);
     });
 
@@ -318,6 +429,55 @@ void main() {
   });
 
   group('SetupAction', () {
+    test('queued Wi-Fi resume cannot undo a newer disconnect', () async {
+      final container = ProviderContainer(
+        overrides: [
+          initProvider.overrideWithBuild((_, _) => true),
+          commonActionProvider.overrideWith(_RaceCommonAction.new),
+          setupActionProvider.overrideWith(_RaceSetupAction.new),
+        ],
+      );
+      addTearDown(container.dispose);
+      final action =
+          container.read(setupActionProvider.notifier) as _RaceSetupAction;
+      final starting = action.startCompleter = Completer<bool>();
+      final start = action.setRunning(true);
+      await Future<void>.delayed(Duration.zero);
+      final resume = action.syncListenerState();
+      final stop = action.setRunning(false);
+
+      starting.complete(true);
+      await Future.wait([start, resume, stop]);
+      await action.syncListenerState();
+
+      expect(action.transitions, [true, false]);
+      expect(container.read(isStartProvider), isFalse);
+    });
+
+    test('Wi-Fi pause and resume preserve running intent', () async {
+      final container = ProviderContainer(
+        overrides: [
+          initProvider.overrideWithBuild((_, _) => true),
+          excludeSSIDsProvider.overrideWithBuild((_, _) => ['Home']),
+          commonActionProvider.overrideWith(_RaceCommonAction.new),
+          setupActionProvider.overrideWith(_RaceSetupAction.new),
+        ],
+      );
+      addTearDown(container.dispose);
+      final action =
+          container.read(setupActionProvider.notifier) as _RaceSetupAction;
+      await action.setRunning(true);
+      container.read(currentSSIDProvider.notifier).value = 'Home';
+      await action.syncListenerState();
+      expect(container.read(isStartProvider), isTrue);
+
+      container.read(currentSSIDProvider.notifier).value = 'Other';
+      await action.syncListenerState();
+      expect(action.transitions, [true, false, true]);
+      expect(container.read(isStartProvider), isTrue);
+      await action.setRunning(false);
+    });
+
     test('macOS LOOM starts only after TUN authorization', () async {
       late _LoomTunSetupAction action;
       final container = ProviderContainer(
@@ -672,6 +832,23 @@ void main() {
       expect(container.read(autoSetSystemDnsStateProvider).a, isFalse);
     });
   });
+}
+
+class _TrafficCore extends Mock implements CoreHandlerInterface {}
+
+class _PendingProfileAction extends ProfilesAction {
+  final response = Completer<Profile>();
+  final downloads = <String>[];
+
+  @override
+  Future<Profile> downloadProfile(Profile profile) async {
+    downloads.add(profile.url);
+    await response.future;
+    return profile.copyWith(lastUpdateDate: DateTime.now());
+  }
+
+  @override
+  Future<void> clearEffect(int profileId) async {}
 }
 
 class _TestProfiles extends Profiles {

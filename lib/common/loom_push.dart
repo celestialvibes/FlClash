@@ -97,6 +97,13 @@ class LoomPush {
   String? _appBuild;
   bool _ready = false;
   bool _started = false;
+  int _generation = 0;
+
+  @protected
+  Future<FirebaseMessaging?> messagingForStart() async {
+    await bootstrap();
+    return _ready ? FirebaseMessaging.instance : null;
+  }
 
   LoomPush({Dio? dio, FirebaseOptions? options})
     : _dio = dio ?? createLoomApiDio(),
@@ -132,13 +139,21 @@ class LoomPush {
     required String appVersion,
     required String appBuild,
   }) async {
+    if (_started) return;
+    _started = true;
+    final generation = ++_generation;
     _appVersion = appVersion;
     _appBuild = appBuild;
-    await bootstrap();
-    if (!_ready || _started) return;
     try {
-      await FirebaseMessaging.instance.requestPermission();
-      _tokenSubscription = FirebaseMessaging.instance.onTokenRefresh.listen(
+      final messaging = await messagingForStart();
+      if (generation != _generation) return;
+      if (messaging == null) {
+        _started = false;
+        return;
+      }
+      await messaging.requestPermission();
+      if (generation != _generation) return;
+      _tokenSubscription = messaging.onTokenRefresh.listen(
         (token) => unawaited(syncToken(token)),
       );
       _messageSubscription = FirebaseMessaging.onMessage.listen(
@@ -147,23 +162,28 @@ class LoomPush {
       _openedSubscription = FirebaseMessaging.onMessageOpenedApp.listen(
         (message) => _emit(message, opened: true),
       );
-      _started = true;
-      final initial = await FirebaseMessaging.instance.getInitialMessage();
+      final initial = await messaging.getInitialMessage();
+      if (generation != _generation) return;
       if (initial != null) _emit(initial, opened: true);
       await syncToken();
     } catch (error) {
-      await stop();
+      if (generation == _generation) await stop();
       debugPrint('LOOM push start failed: $error');
     }
   }
 
   Future<void> syncToken([String? refreshedToken]) async {
-    if (!_ready || _appVersion == null || _appBuild == null) return;
+    if (!_started || !_ready || _appVersion == null || _appBuild == null) {
+      return;
+    }
+    final generation = _generation;
     try {
       final credential = await loomDeviceCredentials.current();
       final token =
           refreshedToken ?? await FirebaseMessaging.instance.getToken();
-      if (credential == null || token == null) return;
+      if (generation != _generation || credential == null || token == null) {
+        return;
+      }
       await registerLoomPushToken(
         dio: _dio,
         deviceCredential: credential,
@@ -177,13 +197,20 @@ class LoomPush {
   }
 
   Future<void> stop() async {
-    await _tokenSubscription?.cancel();
-    await _messageSubscription?.cancel();
-    await _openedSubscription?.cancel();
+    _generation++;
+    _started = false;
+    final subscriptions = [
+      _tokenSubscription,
+      _messageSubscription,
+      _openedSubscription,
+    ];
     _tokenSubscription = null;
     _messageSubscription = null;
     _openedSubscription = null;
-    _started = false;
+    await Future.wait([
+      for (final subscription in subscriptions)
+        if (subscription != null) subscription.cancel(),
+    ]);
   }
 
   void _emit(RemoteMessage message, {required bool opened}) {

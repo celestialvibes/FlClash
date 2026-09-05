@@ -578,5 +578,10 @@
   "loomAuthRateLimited": "Слишком много попыток. Попробуйте позже.",
   "loomAuthSubscriptionMissing": "Для этой почты не найдена активная подписка LOOM.",
   "loomAuthDeviceLimit": "Лимит устройств исчерпан. Удалите старое устройство на loomvpn.pro и попробуйте снова.",
-  "loomAuthInvalidResponse": "LOOM вернул неожиданный ответ. Попробуйте позже."
+  "loomAuthInvalidResponse": "LOOM вернул неожиданный ответ. Попробуйте позже.",
+  "loomSubscriptionInvalidLink": "Ссылка подписки неверна или отозвана. Получите новую на loomvpn.pro.",
+  "loomSubscriptionDenied": "Сервер отказал в доступе к подписке. Проверьте устройство и тариф на loomvpn.pro.",
+  "loomSubscriptionUnavailable": "Сервер подписки временно недоступен. Попробуйте позже.",
+  "loomSubscriptionTimeout": "Сервер подписки не ответил вовремя. Проверьте соединение и попробуйте снова.",
+  "loomSubscriptionExpired": "Подписка истекла. Продлите её на loomvpn.pro, затем обновите подписку."
 }

@@ -422,6 +422,21 @@ class MessageLookup extends MessageLookupByLibrary {
     ),
     "loomManualSubscription": MessageLookupByLibrary.simpleMessage("手动输入订阅"),
     "loomNeedHelp": MessageLookupByLibrary.simpleMessage("需要帮助？"),
+    "loomSubscriptionDenied": MessageLookupByLibrary.simpleMessage(
+      "服务器拒绝访问此订阅。请在 loomvpn.pro 检查设备和套餐。",
+    ),
+    "loomSubscriptionExpired": MessageLookupByLibrary.simpleMessage(
+      "订阅已过期。请在 loomvpn.pro 续订，然后刷新订阅。",
+    ),
+    "loomSubscriptionInvalidLink": MessageLookupByLibrary.simpleMessage(
+      "订阅链接无效或已被撤销。请在 loomvpn.pro 获取新链接。",
+    ),
+    "loomSubscriptionTimeout": MessageLookupByLibrary.simpleMessage(
+      "订阅服务器响应超时。请检查网络连接后重试。",
+    ),
+    "loomSubscriptionUnavailable": MessageLookupByLibrary.simpleMessage(
+      "订阅服务器暂时不可用，请稍后重试。",
+    ),
     "loomTelegramExpired": MessageLookupByLibrary.simpleMessage("确认已过期，请重新登录。"),
     "loomTelegramTitle": MessageLookupByLibrary.simpleMessage("确认登录"),
     "loomTelegramWaiting": MessageLookupByLibrary.simpleMessage(

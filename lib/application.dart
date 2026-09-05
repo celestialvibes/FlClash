@@ -131,16 +131,19 @@ class ApplicationState extends ConsumerState<Application> {
     super.initState();
     SystemNavigator.setFrameworkHandlesBack(true);
     WidgetsBinding.instance.addPostFrameCallback((timeStamp) async {
+      if (!mounted) return;
       if (globalState.navigatorKey.currentContext != null) {
         await globalState.attach();
       } else {
         exit(0);
       }
+      if (!mounted) return;
       _pushSubscription = loomPush.events.listen(_handlePushEvent);
       await loomPush.start(
         appVersion: globalState.packageInfo.version,
         appBuild: globalState.packageInfo.buildNumber,
       );
+      if (!mounted) return;
       _autoUpdateProfilesTask();
       _initLink();
       app?.initShortcuts();
@@ -191,6 +194,7 @@ class ApplicationState extends ConsumerState<Application> {
   }
 
   void _autoUpdateProfilesTask() {
+    if (!mounted) return;
     _autoUpdateProfilesTaskTimer = Timer(const Duration(minutes: 20), () async {
       await ref.read(profilesActionProvider.notifier).autoUpdateProfiles();
       _autoUpdateProfilesTask();

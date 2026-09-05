@@ -1,7 +1,6 @@
 import 'dart:async';
 
 import 'package:fl_clash/common/common.dart';
-import 'package:fl_clash/core/controller.dart';
 import 'package:fl_clash/enum/enum.dart';
 import 'package:fl_clash/manager/window_manager.dart';
 import 'package:fl_clash/providers/providers.dart';
@@ -48,11 +47,11 @@ class _AppStateManagerState extends ConsumerState<AppStateManager>
       final isStart = ref.read(isStartProvider);
       if (prev != next && isStart) {
         debouncer.call(FunctionTag.suspend, () async {
-          if (next == true) {
-            await coreController.stopListener();
-          } else {
-            await coreController.startListener();
-          }
+          if (!mounted) return;
+          await globalState.safeRun(
+            ref.read(setupActionProvider.notifier).syncListenerState,
+          );
+          if (!mounted) return;
           ref.read(checkIpNumProvider.notifier).add();
         });
       }
@@ -73,6 +72,7 @@ class _AppStateManagerState extends ConsumerState<AppStateManager>
 
   @override
   void dispose() {
+    debouncer.cancel(FunctionTag.suspend);
     WidgetsBinding.instance.removeObserver(this);
     super.dispose();
   }
@@ -84,6 +84,7 @@ class _AppStateManagerState extends ConsumerState<AppStateManager>
       permissions.check();
       render?.resume();
       WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
         final ref = globalState.container;
         ref.read(setupActionProvider.notifier).tryCheckIp();
       });

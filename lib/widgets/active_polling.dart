@@ -13,6 +13,7 @@ mixin ActivePollingMixin<T extends StatefulWidget>
   bool _isForeground = false;
   bool _isPageActive = true;
   bool _isPolling = false;
+  bool _pollInFlight = false;
   int _pollGeneration = 0;
 
   Duration get pollInterval;
@@ -104,6 +105,7 @@ mixin ActivePollingMixin<T extends StatefulWidget>
       canPoll && _isPolling && generation == _pollGeneration;
 
   void _schedulePoll(int generation) {
+    _pollTimer?.cancel();
     _pollTimer = Timer(pollInterval, () {
       _pollTimer = null;
       if (_isCurrentPoll(generation)) {
@@ -113,6 +115,8 @@ mixin ActivePollingMixin<T extends StatefulWidget>
   }
 
   Future<void> _runPoll(int generation) async {
+    if (_pollInFlight || !_isCurrentPoll(generation)) return;
+    _pollInFlight = true;
     try {
       await poll(() => _isCurrentPoll(generation));
     } catch (error) {
@@ -121,8 +125,9 @@ mixin ActivePollingMixin<T extends StatefulWidget>
         logLevel: LogLevel.warning,
       );
     } finally {
-      if (_isCurrentPoll(generation)) {
-        _schedulePoll(generation);
+      _pollInFlight = false;
+      if (_isCurrentPoll(_pollGeneration)) {
+        _schedulePoll(_pollGeneration);
       }
     }
   }

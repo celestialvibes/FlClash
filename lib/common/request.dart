@@ -10,6 +10,35 @@ import 'package:fl_clash/models/models.dart';
 import 'package:fl_clash/state.dart';
 import 'package:flutter/cupertino.dart';
 
+class SubscriptionDownloadException implements Exception {
+  final DioExceptionType type;
+  final int? statusCode;
+
+  SubscriptionDownloadException(DioException error)
+    : type = error.type,
+      statusCode = error.response?.statusCode;
+
+  @override
+  String toString() {
+    final l10n = currentAppLocalizations;
+    if (type == DioExceptionType.badResponse) {
+      return switch (statusCode ?? 0) {
+        404 || 410 => l10n.loomSubscriptionInvalidLink,
+        401 || 403 => l10n.loomSubscriptionDenied,
+        429 => l10n.loomAuthRateLimited,
+        >= 500 => l10n.loomSubscriptionUnavailable,
+        _ => l10n.loomAuthInvalidResponse,
+      };
+    }
+    return switch (type) {
+      DioExceptionType.connectionTimeout ||
+      DioExceptionType.sendTimeout ||
+      DioExceptionType.receiveTimeout => l10n.loomSubscriptionTimeout,
+      _ => l10n.networkException,
+    };
+  }
+}
+
 class Request {
   late final Dio dio;
   late final Dio _clashDio;
@@ -17,7 +46,13 @@ class Request {
 
   Request() {
     dio = Dio(BaseOptions(headers: {'User-Agent': browserUa}));
-    _clashDio = Dio();
+    _clashDio = Dio(
+      BaseOptions(
+        connectTimeout: const Duration(seconds: 10),
+        sendTimeout: const Duration(seconds: 15),
+        receiveTimeout: const Duration(seconds: 30),
+      ),
+    );
     _clashDio.httpClientAdapter = IOHttpClientAdapter(
       createHttpClient: () {
         final client = HttpClient();
@@ -42,12 +77,7 @@ class Request {
     } catch (e) {
       commonPrint.log('getFileResponseForUrl failed: ${e.runtimeType}');
       if (e is DioException) {
-        if (e.type == DioExceptionType.unknown) {
-          throw currentAppLocalizations.unknownNetworkError;
-        } else if (e.type == DioExceptionType.badResponse) {
-          throw currentAppLocalizations.networkException;
-        }
-        rethrow;
+        throw SubscriptionDownloadException(e);
       }
       throw currentAppLocalizations.unknownNetworkError;
     }

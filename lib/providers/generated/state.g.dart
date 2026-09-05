@@ -97,7 +97,7 @@ final class NavigationItemsStateProvider
 }
 
 String _$navigationItemsStateHash() =>
-    r'1fc37c14d129f9725b0e62fd53f6b25382f51102';
+    r'a5ef40a81735babc64cb5eda1340a807b26e63c6';
 
 @ProviderFor(currentNavigationItemsState)
 final currentNavigationItemsStateProvider =
@@ -393,7 +393,7 @@ final class NavigationStateProvider
   }
 }
 
-String _$navigationStateHash() => r'657dc47ecc35ba0807b58cb37e7f1baa14f6c2f9';
+String _$navigationStateHash() => r'f8e8cc791e0a9d7e5d75cec399268bc133093af7';
 
 @ProviderFor(dashboardState)
 final dashboardStateProvider = DashboardStateProvider._();
@@ -1783,7 +1783,7 @@ final class CheckIpProvider
   }
 }
 
-String _$checkIpHash() => r'7d8be66f0e8164bcf20c32659da2a4bea9893596';
+String _$checkIpHash() => r'4d74ea01299b3508bcb5621cead4000f6993ab44';
 
 @ProviderFor(genColorScheme)
 final genColorSchemeProvider = GenColorSchemeFamily._();
@@ -1917,7 +1917,7 @@ final class CurrentBrightnessProvider
   }
 }
 
-String _$currentBrightnessHash() => r'ab56c47af4fcae773c8f9f81c91800c1e1890b70';
+String _$currentBrightnessHash() => r'a871c31434313d4a6319d82d9b105d430136c728';
 
 @ProviderFor(autoSetSystemDnsState)
 final autoSetSystemDnsStateProvider = AutoSetSystemDnsStateProvider._();
@@ -2050,7 +2050,7 @@ final class SharedStateProvider
   }
 }
 
-String _$sharedStateHash() => r'eeae9ab857cd6263f761290054774460f9e86069';
+String _$sharedStateHash() => r'34470d2dc8eb10d50e32d1ea71bcb6a0ceaab88e';
 
 @ProviderFor(overlayTopOffset)
 final overlayTopOffsetProvider = OverlayTopOffsetProvider._();

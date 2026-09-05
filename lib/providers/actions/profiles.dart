@@ -2,6 +2,30 @@ part of '../action.dart';
 
 @Riverpod(keepAlive: true)
 class ProfilesAction extends _$ProfilesAction {
+  final _mutations = <int, (SerialTaskScheduler, int)>{};
+
+  Future<T> mutateProfile<T>(
+    int id,
+    Future<T> Function(Profile current) action,
+  ) async {
+    final (scheduler, users) = _mutations[id] ?? (SerialTaskScheduler(), 0);
+    _mutations[id] = (scheduler, users + 1);
+    try {
+      return await scheduler.run(() async {
+        final current = ref.read(profilesProvider).getProfile(id);
+        if (current == null) throw StateError('Profile no longer exists');
+        return action(current);
+      });
+    } finally {
+      final remaining = _mutations[id]!.$2 - 1;
+      if (remaining == 0) {
+        _mutations.remove(id);
+      } else {
+        _mutations[id] = (scheduler, remaining);
+      }
+    }
+  }
+
   @override
   void build() {}
 
@@ -17,7 +41,7 @@ class ProfilesAction extends _$ProfilesAction {
     }
   }
 
-  Future<void> deleteProfile(int id) async {
+  Future<void> deleteProfile(int id) => mutateProfile(id, (_) async {
     await ref.read(profilesProvider.notifier).del(id);
     await clearEffect(id);
     final currentProfileId = ref.read(currentProfileIdProvider);
@@ -31,7 +55,7 @@ class ProfilesAction extends _$ProfilesAction {
         ref.read(setupActionProvider.notifier).setRunning(false);
       }
     }
-  }
+  });
 
   Future<void> autoUpdateProfiles() async {
     for (final profile in ref.read(profilesProvider)) {
@@ -63,25 +87,67 @@ class ProfilesAction extends _$ProfilesAction {
     }
   }
 
+  @protected
+  Future<Profile> downloadProfile(Profile profile) => profile.update();
+
   Future<void> updateProfile(
     Profile profile, {
     bool showLoading = false,
-  }) async {
-    try {
-      if (showLoading) {
-        ref.read(isUpdatingProvider(profile.updatingKey).notifier).value = true;
-      }
-      ref.read(profilesProvider.notifier).put(profile);
-      final newProfile = await profile.update();
-      ref.read(profilesProvider.notifier).put(newProfile);
-      if (profile.id == ref.read(currentProfileIdProvider)) {
+    bool rollbackOnFailure = false,
+    bool updateMetadata = false,
+  }) {
+    return mutateProfile(profile.id, (current) async {
+      final requested = updateMetadata
+          ? current.copyWith(
+              url: profile.url,
+              label: profile.label,
+              autoUpdate: profile.autoUpdate,
+              autoUpdateDuration: profile.autoUpdateDuration,
+            )
+          : current;
+      try {
+        if (showLoading) {
+          ref.read(isUpdatingProvider(profile.updatingKey).notifier).value =
+              true;
+        }
+        ref.read(profilesProvider.notifier).put(requested);
+        final downloaded = await downloadProfile(requested);
+        if (!ref.mounted) return;
+        final latest = ref.read(profilesProvider).getProfile(profile.id);
+        if (latest == null) return;
         ref
-            .read(setupActionProvider.notifier)
-            .applyProfileDebounce(silence: true);
+            .read(profilesProvider.notifier)
+            .put(
+              latest.copyWith(
+                label: latest.label == requested.label
+                    ? downloaded.label
+                    : latest.label,
+                subscriptionInfo: downloaded.subscriptionInfo,
+                lastUpdateDate: downloaded.lastUpdateDate,
+              ),
+            );
+        if (profile.id == ref.read(currentProfileIdProvider)) {
+          ref
+              .read(setupActionProvider.notifier)
+              .applyProfileDebounce(silence: true);
+        }
+      } catch (_) {
+        if (rollbackOnFailure && ref.mounted) {
+          final latest = ref.read(profilesProvider).getProfile(profile.id);
+          if (latest != null) {
+            ref
+                .read(profilesProvider.notifier)
+                .put(latest.copyWith(url: current.url));
+          }
+        }
+        rethrow;
+      } finally {
+        if (ref.mounted) {
+          ref.read(isUpdatingProvider(profile.updatingKey).notifier).value =
+              false;
+        }
       }
-    } finally {
-      ref.read(isUpdatingProvider(profile.updatingKey).notifier).value = false;
-    }
+    });
   }
 
   Future<void> addProfileFormFile() async {
@@ -102,30 +168,45 @@ class ProfilesAction extends _$ProfilesAction {
     }
   }
 
-  Future<bool> addProfileFormURL(String url, {bool showError = true}) async {
+  Future<bool> addProfileFormURL(
+    String url, {
+    bool showError = true,
+    void Function(Object error)? onError,
+  }) async {
+    Future<T> captureError<T>(Future<T> Function() action) async {
+      try {
+        return await action();
+      } catch (error) {
+        onError?.call(error);
+        rethrow;
+      }
+    }
+
     if (globalState.navigatorKey.currentState?.canPop() ?? false) {
       globalState.navigatorKey.currentState?.popUntil((route) => route.isFirst);
     }
     final currentProfile = ref.read(currentProfileProvider);
     if (currentProfile != null) {
       final updated = await globalState.safeRun(() async {
-        await updateProfile(
-          currentProfile.copyWith(url: url),
-          showLoading: true,
+        await captureError(
+          () => updateProfile(
+            currentProfile.copyWith(url: url),
+            showLoading: true,
+            rollbackOnFailure: true,
+            updateMetadata: true,
+          ),
         );
         return true;
       }, showError: showError);
       if (updated == true) {
         ref.read(currentPageLabelProvider.notifier).value = PageLabel.dashboard;
-      } else {
-        ref.read(profilesProvider.notifier).put(currentProfile);
       }
       return updated == true;
     }
     final profile = await globalState.loadingRun(
       tag: LoadingTag.profiles,
       () async {
-        return Profile.normal(url: url).update();
+        return captureError(() => Profile.normal(url: url).update());
       },
       title: currentAppLocalizations.addProfile,
       showError: showError,

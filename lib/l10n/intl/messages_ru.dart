@@ -619,6 +619,21 @@ class MessageLookup extends MessageLookupByLibrary {
       "Ввести подписку вручную",
     ),
     "loomNeedHelp": MessageLookupByLibrary.simpleMessage("Нужна помощь?"),
+    "loomSubscriptionDenied": MessageLookupByLibrary.simpleMessage(
+      "Сервер отказал в доступе к подписке. Проверьте устройство и тариф на loomvpn.pro.",
+    ),
+    "loomSubscriptionExpired": MessageLookupByLibrary.simpleMessage(
+      "Подписка истекла. Продлите её на loomvpn.pro, затем обновите подписку.",
+    ),
+    "loomSubscriptionInvalidLink": MessageLookupByLibrary.simpleMessage(
+      "Ссылка подписки неверна или отозвана. Получите новую на loomvpn.pro.",
+    ),
+    "loomSubscriptionTimeout": MessageLookupByLibrary.simpleMessage(
+      "Сервер подписки не ответил вовремя. Проверьте соединение и попробуйте снова.",
+    ),
+    "loomSubscriptionUnavailable": MessageLookupByLibrary.simpleMessage(
+      "Сервер подписки временно недоступен. Попробуйте позже.",
+    ),
     "loomTelegramExpired": MessageLookupByLibrary.simpleMessage(
       "Подтверждение истекло. Начните вход ещё раз.",
     ),

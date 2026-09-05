@@ -22,15 +22,15 @@ class ConnectivityManager extends StatefulWidget {
 
 class _ConnectivityManagerState extends State<ConnectivityManager> {
   late StreamSubscription subscription;
+  int _networkRevision = 0;
 
   @override
   void initState() {
     super.initState();
     subscription = Connectivity().onConnectivityChanged.listen((results) {
+      final revision = ++_networkRevision;
       if (results.contains(ConnectivityResult.wifi)) {
-        WifiSsidManager.instance.getSsid().then((ssid) {
-          globalState.container.read(currentSSIDProvider.notifier).value = ssid;
-        });
+        unawaited(_updateSsid(revision));
       } else {
         globalState.container.read(currentSSIDProvider.notifier).value = null;
       }
@@ -38,6 +38,17 @@ class _ConnectivityManagerState extends State<ConnectivityManager> {
         widget.onConnectivityChanged!(results);
       }
     });
+  }
+
+  Future<void> _updateSsid(int revision) async {
+    String? ssid;
+    try {
+      ssid = await WifiSsidManager.instance.getSsid();
+    } catch (_) {
+      ssid = null;
+    }
+    if (!mounted || revision != _networkRevision) return;
+    globalState.container.read(currentSSIDProvider.notifier).value = ssid;
   }
 
   @override

@@ -530,6 +530,8 @@ Dio createLoomApiDio() {
     BaseOptions(
       headers: {'Accept': 'application/json'},
       connectTimeout: const Duration(seconds: 10),
+      sendTimeout: const Duration(seconds: 10),
+      receiveTimeout: const Duration(seconds: 10),
     ),
   );
   dio.httpClientAdapter = IOHttpClientAdapter(
